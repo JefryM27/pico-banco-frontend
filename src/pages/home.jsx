@@ -1,34 +1,13 @@
 import React from "react";
+import Header from "../components/header.jsx"; // ✅ Importamos el header reutilizable
 import { Link } from "react-router-dom";
 import "./../index.css";
 
 export default function Home() {
   return (
     <div className="dashboard-container">
-      {/* Header principal */}
-      <nav className="navbar">
-        <div className="navbar-left">
-          <h1 className="navbar-logo">PicoBanco</h1>
-          <ul className="navbar-links">
-            <li>
-              <Link to="/home">Inicio</Link>
-            </li>
-            <li>
-              <Link to="/users">Usuarios</Link>
-            </li>
-            <li>
-              <Link to="/transactions">Transacciones</Link>
-            </li>
-            <li>
-              <Link to="/create">Nueva Transacción</Link>
-            </li>
-          </ul>
-        </div>
-        <div className="navbar-right">
-          <button className="btn-outline">Cuenta</button>
-          <button className="btn-primary">Cerrar sesión</button>
-        </div>
-      </nav>
+      {/* ✅ Header reutilizable en toda la app */}
+      <Header />
 
       {/* Contenido principal */}
       <div className="dashboard-inner">
