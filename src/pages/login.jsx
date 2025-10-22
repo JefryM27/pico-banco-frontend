@@ -1,12 +1,10 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { AuthContext } from "../context/authContext.jsx";
+import * as authService from "../services/auth.service";
 import "./login.css";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext);
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,9 +16,9 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await login({ username, password });
+      const res = await authService.login({ username, password });
       if (res?.status === 200) {
-        navigate("/");
+        navigate("/home");
       } else {
         setError("Credenciales incorrectas o error de conexión.");
       }
@@ -34,20 +32,17 @@ export default function Login() {
   return (
     <div className="login-container">
       <div className="login-box">
-        <h1>PicoBanco</h1>
-        <h2>Iniciar sesión</h2>
-        <p className="subtitle">
-          Accede a tu cuenta (modo demo <strong>vulnerable</strong>).
-        </p>
+        <h1 className="bank-title">PicoBanco</h1>
+        <h2 className="login-subtitle">Iniciar sesión</h2>
 
         <form onSubmit={handleSubmit} className="login-form">
           <label>
             Usuario
             <input
               type="text"
-              placeholder="ej: juan"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              placeholder="ej: juan"
             />
           </label>
 
@@ -55,9 +50,9 @@ export default function Login() {
             Contraseña
             <input
               type="password"
-              placeholder="tu contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="tu contraseña"
             />
           </label>
 
@@ -69,7 +64,10 @@ export default function Login() {
         </form>
 
         <p className="register-link">
-          ¿No tienes cuenta? <Link to="/register">Crear cuenta</Link>
+          ¿No tienes cuenta?{" "}
+          <Link to="/register" className="register-highlight">
+            Crear cuenta
+          </Link>
         </p>
       </div>
     </div>

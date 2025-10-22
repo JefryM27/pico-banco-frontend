@@ -1,114 +1,135 @@
-/* ======== LOGIN PAGE DESIGN ======== */
-
+/* Estilo general del fondo */
 .login-container {
+  min-height: 100vh;
   display: flex;
-  justify-content: center;
   align-items: center;
-  height: calc(100vh - 60px);
-  background: linear-gradient(135deg, #2563eb, #1e3a8a);
-  font-family: "Poppins", sans-serif;
+  justify-content: center;
+  background: linear-gradient(180deg, #1e3a8a 0%, #0f172a 100%);
+  font-family: "Inter", sans-serif;
 }
 
+/* Caja principal */
 .login-box {
-  background-color: #ffffff;
-  padding: 3rem 2.5rem;
+  background: #ffffff;
+  padding: 40px;
   border-radius: 16px;
-  width: 400px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  width: 380px;
   text-align: center;
 }
 
-.login-box h1 {
-  color: #2563eb;
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
+/* Título principal */
+.bank-title {
+  font-size: 28px;
+  color: #1e3a8a;
+  font-weight: 700;
+  margin-bottom: 6px;
 }
 
-.login-box h2 {
+/* Subtítulo */
+.login-subtitle {
+  font-size: 20px;
+  font-weight: 600;
   color: #111827;
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 4px;
 }
 
-.subtitle {
-  color: #555;
-  font-size: 0.9rem;
-  margin-bottom: 1.8rem;
+/* Descripción */
+.login-description {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 24px;
 }
 
+.login-description span {
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+/* Formulario */
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 16px;
   text-align: left;
 }
 
 .login-form label {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #333;
+  font-size: 14px;
+  color: #374151;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .login-form input {
-  width: 100%;
-  padding: 0.75rem;
-  border-radius: 8px;
   border: 1px solid #d1d5db;
-  margin-top: 0.3rem;
-  font-size: 0.95rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
 }
 
 .login-form input:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
-  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
-button {
-  width: 100%;
-  background-color: #2563eb;
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 600;
-  padding: 0.9rem;
+/* Botón */
+.login-form button {
+  background: #2563eb;
+  color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
-  margin-top: 0.5rem;
-  transition: background-color 0.3s ease, transform 0.1s ease;
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
-button:hover {
-  background-color: #1e40af;
-  transform: translateY(-1px);
+.login-form button:hover {
+  background: #1d4ed8;
 }
 
-button:disabled {
-  opacity: 0.6;
+.login-form button:active {
+  transform: scale(0.98);
+}
+
+.login-form button:disabled {
+  background: #3b82f6;
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
+/* Error */
+.error {
+  color: #dc2626;
+  font-size: 13px;
+  text-align: center;
+}
+/* Enlace inferior */
 .register-link {
-  margin-top: 1.5rem;
-  font-size: 0.9rem;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #6b7280; /* gris medio visible sobre blanco */
 }
 
-.register-link a {
+.register-highlight {
   color: #2563eb;
+  font-weight: 600;
   text-decoration: none;
-  font-weight: 500;
 }
 
-.register-link a:hover {
+.register-highlight:hover {
   text-decoration: underline;
 }
 
-.error {
-  color: #dc2626;
-  background: #fee2e2;
-  padding: 0.5rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  text-align: center;
+/* Ajuste para pantallas pequeñas */
+@media (max-width: 400px) {
+  .login-box {
+    width: 90%;
+    padding: 24px;
+  }
 }

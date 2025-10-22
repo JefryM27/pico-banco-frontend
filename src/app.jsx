@@ -1,8 +1,10 @@
 import React from "react";
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
+// Páginas
 import Home from "./pages/home.jsx";
 import Login from "./pages/login.jsx";
+import Register from "./pages/register.jsx";
 import UsersList from "./pages/userList.jsx";
 import Transactions from "./pages/transactions.jsx";
 import CreateTransaction from "./pages/createTransaction.jsx";
@@ -10,30 +12,92 @@ import UserTransactions from "./pages/userTransaction.jsx";
 import SecurityDemo from "./pages/securityDemo.jsx";
 import NotFound from "./pages/notFount.jsx";
 
-export default function App() {
-  return (
-    <div>
-      <header className="p-4 border-b">
-        <Link to="/" className="mr-4">PicoBanco</Link>
-        <Link to="/users" className="mr-2">Users</Link>
-        <Link to="/transactions" className="mr-2">Transactions</Link>
-        <Link to="/create" className="mr-2">Create TX</Link>
-        <Link to="/demo" className="mr-2">Security Demo</Link>
-        <Link to="/login" className="mr-2">Login</Link>
-      </header>
+// Servicios de autenticación
+import { isAuthenticated } from "./services/auth.service.js";
 
-      <main className="p-4">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/users" element={<UsersList />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/create" element={<CreateTransaction />} />
-          <Route path="/transactions/user" element={<UserTransactions />} />
-          <Route path="/demo" element={<SecurityDemo />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-    </div>
+export default function App() {
+  const location = useLocation();
+
+  // Oculta padding en login y registro
+  const isAuthPage =
+    location.pathname === "/login" || location.pathname === "/register";
+
+  return (
+    <main className={isAuthPage ? "" : "p-0"}>
+      <Routes>
+        {/* Redirección raíz */}
+        <Route
+          path="/"
+          element={
+            isAuthenticated() ? (
+              <Navigate to="/home" replace />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        {/* Autenticación */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Páginas principales (solo accesibles si hay sesión activa) */}
+        <Route
+          path="/home"
+          element={
+            isAuthenticated() ? <Home /> : <Navigate to="/login" replace />
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            isAuthenticated() ? <UsersList /> : <Navigate to="/login" replace />
+          }
+        />
+        <Route
+          path="/transactions"
+          element={
+            isAuthenticated() ? (
+              <Transactions />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/create"
+          element={
+            isAuthenticated() ? (
+              <CreateTransaction />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/transactions/user"
+          element={
+            isAuthenticated() ? (
+              <UserTransactions />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/demo"
+          element={
+            isAuthenticated() ? (
+              <SecurityDemo />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        {/* Página no encontrada */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </main>
   );
 }

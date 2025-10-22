@@ -1,98 +1,146 @@
 import React from "react";
 import { Link } from "react-router-dom";
-
-/*
-  Dashboard limpio y atractivo usando Tailwind.
-  - tarjetas resumen
-  - accesos rápidos a funcionalidades vulnerables (demo)
-  - gráfico simple (SVG) para darle aspecto profesional sin librerías
-*/
+import "./../index.css";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+    <div className="dashboard-container">
+      {/* Header principal */}
+      <nav className="navbar">
+        <div className="navbar-left">
+          <h1 className="navbar-logo">PicoBanco</h1>
+          <ul className="navbar-links">
+            <li>
+              <Link to="/home">Inicio</Link>
+            </li>
+            <li>
+              <Link to="/users">Usuarios</Link>
+            </li>
+            <li>
+              <Link to="/transactions">Transacciones</Link>
+            </li>
+            <li>
+              <Link to="/create">Nueva Transacción</Link>
+            </li>
+          </ul>
+        </div>
+        <div className="navbar-right">
+          <button className="btn-outline">Cuenta</button>
+          <button className="btn-primary">Cerrar sesión</button>
+        </div>
+      </nav>
+
+      {/* Contenido principal */}
+      <div className="dashboard-inner">
+        <header className="dashboard-header">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">PicoBanco</h1>
-            <p className="text-sm text-gray-500">Panel de administración — Demo de vulnerabilidades para la clase</p>
+            <h2 className="dashboard-title">Panel de Administración</h2>
+            <p className="dashboard-subtitle">
+              Bienvenido al sistema bancario interno de PicoBanco.
+            </p>
           </div>
+        </header>
 
-          <div className="flex items-center gap-3">
-            <button className="px-3 py-2 rounded-md bg-white border text-sm">Cuenta</button>
-            <button className="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm">Cerrar sesión</button>
-          </div>
+        {/* Tarjetas resumen */}
+        <div className="dashboard-stats">
+          <StatCard
+            title="Usuarios"
+            value="12"
+            subtitle="Cuentas activas"
+            color="yellow"
+          />
+          <StatCard
+            title="Transacciones"
+            value="248"
+            subtitle="Operaciones registradas"
+            color="green"
+          />
+          <StatCard
+            title="Sistema"
+            value="Operativo"
+            subtitle="Actualizado al día"
+            color="red"
+          />
         </div>
 
-        {/* Top cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <StatCard title="Usuarios" value="12" subtitle="Incluye contraseñas (demo)" color="from-yellow-400 to-yellow-300" />
-          <StatCard title="Transacciones" value="248" subtitle="Incluye descripciones (XSS posible)" color="from-green-400 to-green-300" />
-          <StatCard title="Sistema" value="Vulnerable" subtitle="Modo: por defecto vulnerable" color="from-red-400 to-red-300" />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: quick menu */}
-          <div className="col-span-1 bg-white rounded-xl p-4 shadow">
-            <h3 className="font-semibold mb-3">Accesos rápidos</h3>
-            <ul className="space-y-2">
-              <li><Link to="/users" className="block p-2 rounded hover:bg-gray-50">Ver usuarios (exposición de contraseñas)</Link></li>
-              <li><Link to="/transactions" className="block p-2 rounded hover:bg-gray-50">Ver transacciones (XSS)</Link></li>
-              <li><Link to="/create" className="block p-2 rounded hover:bg-gray-50">Crear transacción (senderId editable)</Link></li>
-              <li><Link to="/demo" className="block p-2 rounded hover:bg-gray-50">Security Demo (payloads)</Link></li>
+        {/* Cuerpo principal */}
+        <div className="dashboard-grid">
+          <div className="card">
+            <h3 className="card-title">Accesos rápidos</h3>
+            <ul className="card-links">
+              <MenuLink to="/users" label="Gestión de usuarios" />
+              <MenuLink to="/transactions" label="Ver transacciones" />
+              <MenuLink to="/create" label="Registrar nueva transacción" />
             </ul>
           </div>
 
-          {/* Center: gráfico */}
-          <div className="col-span-1 lg:col-span-2 bg-white rounded-xl p-4 shadow">
-            <h3 className="font-semibold mb-3">Actividad reciente</h3>
+          <div className="card large">
+            <h3 className="card-title">Actividad reciente</h3>
             <MiniChart />
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-              <InfoBox title="SQLi" value="Pruebas activas" />
-              <InfoBox title="XSS" value="Payloads listos" />
-              <InfoBox title="IDOR" value="Acceso abierto" />
+            <div className="info-grid">
+              <InfoBox title="Transacciones hoy" value="53" />
+              <InfoBox title="Nuevos usuarios" value="4" />
+              <InfoBox title="Alertas" value="Sin novedades" />
             </div>
           </div>
         </div>
 
-        {/* Footer / notes */}
-        <div className="mt-6 text-sm text-gray-500">
-          <p><strong>Nota:</strong> este dashboard está diseñado para fines educativos: el backend deliberadamente contiene vulnerabilidades OWASP para prácticas de explotación y mitigación. No utilices estas configuraciones en producción.</p>
-        </div>
+        <footer className="dashboard-footer">
+          <p>© 2025 PicoBanco — Todos los derechos reservados.</p>
+        </footer>
       </div>
     </div>
   );
 }
 
 /* Subcomponentes */
-function StatCard({ title, value, subtitle, color = "from-indigo-400 to-indigo-300" }) {
+function StatCard({ title, value, subtitle, color }) {
   return (
-    <div className={`rounded-xl p-4 shadow-md bg-gradient-to-r ${color}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-xs text-gray-700">{title}</div>
-          <div className="text-2xl font-bold text-gray-900">{value}</div>
-        </div>
-        <div className="text-sm text-gray-700">{subtitle}</div>
+    <div className={`stat-card ${color}`}>
+      <div>
+        <div className="stat-title">{title}</div>
+        <div className="stat-value">{value}</div>
       </div>
+      <div className="stat-subtitle">{subtitle}</div>
     </div>
   );
 }
 
-function MiniChart() {
-  // SVG line chart (estético)
+function MenuLink({ to, label }) {
   return (
-    <div className="w-full h-40">
-      <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full">
+    <li>
+      <Link to={to} className="menu-link">
+        {label}
+      </Link>
+    </li>
+  );
+}
+
+function MiniChart() {
+  return (
+    <div className="chart">
+      <svg
+        viewBox="0 0 100 40"
+        preserveAspectRatio="none"
+        className="chart-svg"
+      >
         <defs>
-          <linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.05" />
+          <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.1" />
           </linearGradient>
         </defs>
-        <path d="M0,30 L10,24 L20,18 L30,22 L40,14 L50,10 L60,16 L70,8 L80,12 L90,6 L100,10" fill="none" stroke="#6366f1" strokeWidth="1.6" />
-        <polygon points="0,30 10,24 20,18 30,22 40,14 50,10 60,16 70,8 80,12 90,6 100,10 100,40 0,40" fill="url(#g)" opacity="0.9" />
+        <path
+          d="M0,30 L10,24 L20,18 L30,22 L40,14 L50,10 L60,16 L70,8 L80,12 L90,6 L100,10"
+          fill="none"
+          stroke="#3b82f6"
+          strokeWidth="1.6"
+        />
+        <polygon
+          points="0,30 10,24 20,18 30,22 40,14 50,10 60,16 70,8 80,12 90,6 100,10 100,40 0,40"
+          fill="url(#chartGradient)"
+          opacity="0.8"
+        />
       </svg>
     </div>
   );
@@ -100,9 +148,9 @@ function MiniChart() {
 
 function InfoBox({ title, value }) {
   return (
-    <div className="p-3 border rounded-md">
-      <div className="text-xs text-gray-400">{title}</div>
-      <div className="text-lg font-semibold text-gray-800">{value}</div>
+    <div className="info-box">
+      <div className="info-title">{title}</div>
+      <div className="info-value">{value}</div>
     </div>
   );
 }
