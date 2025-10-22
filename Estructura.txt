@@ -1,0 +1,38 @@
+frontend/
+├─ package.json
+├─ vite.config.js
+├─ tailwind.config.cjs
+├─ postcss.config.cjs
+├─ .env.example
+├─ index.html
+└─ src/
+   ├─ main.jsx
+   ├─ index.css
+   ├─ App.jsx
+   ├─ constants/
+   │  └─ routes.js
+   ├─ context/
+   │  └─ AuthContext.jsx
+   ├─ hooks/
+   │  └─ useApi.js
+   ├─ services/
+   │  ├─ auth.service.js
+   │  ├─ user.service.js
+   │  └─ transaction.service.js
+   ├─ pages/
+   │  ├─ Home.jsx
+   │  ├─ Login.jsx
+   │  ├─ Register.jsx
+   │  ├─ UsersList.jsx
+   │  ├─ UserDetail.jsx
+   │  ├─ Transactions.jsx
+   │  ├─ UserTransactions.jsx
+   │  ├─ CreateTransaction.jsx
+   │  ├─ SecurityDemo.jsx
+   │  └─ NotFound.jsx
+   ├─ components/
+   │  ├─ Header.jsx
+   │  ├─ TransactionCard.jsx
+   │  └─ UserCard.jsx
+   └─ utils/
+      └─ sanitize.js

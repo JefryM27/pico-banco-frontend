@@ -1,0 +1,76 @@
+    # Node / dependency folders
+node_modules/
+.pnp/
+.pnp.js
+
+# Build output
+dist/
+build/
+.out/
+.cache/
+
+# Vite / dev
+.vite/
+
+# Env files (keep .env.example tracked)
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Editor temp files & local history
+*.swp
+*~ 
+.history/
+
+# Test coverage
+coverage/
+coverage-final.json
+
+# Misc caches
+*.log
+.cache/
+.tmp/
+
+# Optional package manager files you may or may not want to track
+# (uncomment if you prefer to ignore locks)
+# yarn.lock
+# package-lock.json
+# pnpm-lock.yaml
+
+# Mac/Windows thumbnail stores
+Icon?
+ehthumbs.db
+
+# Generated/virtual envs, containers
+.vagrant/
+.envrc
+
+# Static assets that might be generated
+public/build/
+
+# IDE project settings
+*.iml
+
+# Security: sensible files that must not be committed
+secrets.* 
+*.pem
+*.key
