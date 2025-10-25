@@ -7,6 +7,7 @@ export default function Header() {
   function handleLogout() {
     localStorage.removeItem("token");
     localStorage.removeItem("username");
+    localStorage.removeItem("userId");
     navigate("/login");
   }
 
@@ -27,7 +28,12 @@ export default function Header() {
           </li>
           <li>
             <Link to="/create" className="text-gray-300 hover:text-blue-400 text-sm transition no-underline">
-              Nueva Transacción
+              Transferir
+            </Link>
+          </li>
+          <li>
+            <Link to="/pay-services" className="text-gray-300 hover:text-blue-400 text-sm transition no-underline">
+              Pagar Servicios
             </Link>
           </li>
         </ul>

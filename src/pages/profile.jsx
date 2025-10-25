@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Header from "../components/Header.jsx";
+import Header from "../components/header.jsx";
 
 export default function Profile() {
   const [username] = useState(localStorage.getItem("username") || "Usuario");

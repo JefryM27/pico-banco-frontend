@@ -6,6 +6,7 @@ import Login from "./pages/login.jsx";
 import Register from "./pages/register.jsx";
 import CreateTransaction from "./pages/createTransaction.jsx";
 import MyTransactions from "./pages/myTransactions.jsx";
+import PayServices from "./pages/payServices.jsx";
 import Profile from "./pages/profile.jsx";
 import NotFound from "./pages/notFount.jsx";
 
@@ -45,6 +46,12 @@ export default function App() {
           path="/create"
           element={
             isAuthenticated() ? <CreateTransaction /> : <Navigate to="/login" replace />
+          }
+        />
+        <Route
+          path="/pay-services"
+          element={
+            isAuthenticated() ? <PayServices /> : <Navigate to="/login" replace />
           }
         />
         <Route

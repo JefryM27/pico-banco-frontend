@@ -1,6 +1,5 @@
 import api from '../hooks/useApi'
 
-export const getAllUsers = () => api.get('/users')
-export const getUserById = (id) => api.get(`/users/${id}`)
-export const deleteUser = (id) => api.delete(`/users/${id}`)
-export const register = (payload) => api.post('/users/register', payload)
+export const getMyProfile = () => api.get('/users/me')
+export const getMyBalance = () => api.get('/users/me/balance')
+export const updateProfile = (data) => api.put('/users/me', data)
