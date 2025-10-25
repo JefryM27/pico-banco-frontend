@@ -1,108 +1,113 @@
 import React from "react";
-import Header from "../components/header.jsx"; // ✅ Importamos el header reutilizable
-import { Link } from "react-router-dom";
-import "./../index.css";
+import { Link, useNavigate } from "react-router-dom";
+import Header from "../components/header.jsx";
 
 export default function Home() {
+  const navigate = useNavigate();
+  const username = localStorage.getItem("username") || "Usuario";
+
   return (
-    <div className="dashboard-container">
-      {/* ✅ Header reutilizable en toda la app */}
+    <div className="min-h-screen bg-gradient-to-b from-[#0b1220] to-[#08101a] text-gray-100">
       <Header />
 
-      {/* Contenido principal */}
-      <div className="dashboard-inner">
-        <header className="dashboard-header">
-          <div>
-            <h2 className="dashboard-title">Panel de Administración</h2>
-            <p className="dashboard-subtitle">
-              Bienvenido al sistema bancario interno de PicoBanco.
-            </p>
-          </div>
+      <main className="max-w-6xl mx-auto px-8 py-6 animate-fadeIn">
+        <header className="mb-10">
+          <h2 className="text-3xl font-bold text-blue-400 mb-2">
+            Bienvenido, {username}
+          </h2>
+          <p className="text-gray-400 text-sm">
+            Gestiona tus transacciones desde tu panel personal.
+          </p>
         </header>
 
-        {/* Tarjetas resumen */}
-        <div className="dashboard-stats">
-          <StatCard
-            title="Usuarios"
-            value="12"
-            subtitle="Cuentas activas"
-            color="yellow"
-          />
-          <StatCard
-            title="Transacciones"
-            value="248"
-            subtitle="Operaciones registradas"
-            color="green"
-          />
-          <StatCard
-            title="Sistema"
-            value="Operativo"
-            subtitle="Actualizado al día"
-            color="red"
-          />
-        </div>
+        {/* Tarjetas de resumen */}
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+          <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 text-gray-900 rounded-xl p-5 shadow-md flex flex-col justify-between">
+            <div>
+              <h3 className="text-xs font-semibold uppercase">Saldo</h3>
+              <p className="text-3xl font-bold mt-1">$0.00</p>
+            </div>
+            <p className="text-xs mt-2">Balance actual</p>
+          </div>
 
-        {/* Cuerpo principal */}
-        <div className="dashboard-grid">
-          <div className="card">
-            <h3 className="card-title">Accesos rápidos</h3>
-            <ul className="card-links">
-              <MenuLink to="/users" label="Gestión de usuarios" />
-              <MenuLink to="/transactions" label="Ver transacciones" />
-              <MenuLink to="/create" label="Registrar nueva transacción" />
+          <div className="bg-gradient-to-r from-green-400 to-emerald-300 text-gray-900 rounded-xl p-5 shadow-md flex flex-col justify-between">
+            <div>
+              <h3 className="text-xs font-semibold uppercase">Transacciones</h3>
+              <p className="text-3xl font-bold mt-1">0</p>
+            </div>
+            <p className="text-xs mt-2">Operaciones realizadas</p>
+          </div>
+
+          <div className="bg-gradient-to-r from-blue-400 to-blue-300 text-gray-900 rounded-xl p-5 shadow-md flex flex-col justify-between">
+            <div>
+              <h3 className="text-xs font-semibold uppercase">Estado</h3>
+              <p className="text-3xl font-bold mt-1">Activo</p>
+            </div>
+            <p className="text-xs mt-2">Cuenta verificada</p>
+          </div>
+        </section>
+
+        {/* Accesos rápidos */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-white/5 rounded-xl p-5 border border-white/10 shadow-md">
+            <h3 className="font-semibold text-blue-300 mb-4">
+              Accesos rápidos
+            </h3>
+            <ul className="space-y-3">
+              <li>
+                <Link
+                  to="/create"
+                  className="block bg-gray-800/50 hover:bg-gray-700 p-3 rounded-md transition border border-gray-700"
+                >
+                  💸 Nueva transacción
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/transactions"
+                  className="block bg-gray-800/50 hover:bg-gray-700 p-3 rounded-md transition border border-gray-700"
+                >
+                  📊 Mis transacciones
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/profile"
+                  className="block bg-gray-800/50 hover:bg-gray-700 p-3 rounded-md transition border border-gray-700"
+                >
+                  👤 Mi perfil
+                </Link>
+              </li>
             </ul>
           </div>
 
-          <div className="card large">
-            <h3 className="card-title">Actividad reciente</h3>
+          {/* Actividad reciente */}
+          <div className="lg:col-span-2 bg-white/5 rounded-xl p-5 border border-white/10 shadow-md">
+            <h3 className="font-semibold text-blue-300 mb-4">
+              Actividad reciente
+            </h3>
             <MiniChart />
-            <div className="info-grid">
-              <InfoBox title="Transacciones hoy" value="53" />
-              <InfoBox title="Nuevos usuarios" value="4" />
-              <InfoBox title="Alertas" value="Sin novedades" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+              <InfoBox title="Enviadas hoy" value="0" />
+              <InfoBox title="Recibidas hoy" value="0" />
+              <InfoBox title="Pendientes" value="0" />
             </div>
           </div>
-        </div>
+        </section>
 
-        <footer className="dashboard-footer">
-          <p>© 2025 PicoBanco — Todos los derechos reservados.</p>
+        <footer className="text-center text-sm text-gray-500 mt-12 pb-6">
+          © 2025 PicoBanco — Todos los derechos reservados.
         </footer>
-      </div>
+      </main>
     </div>
   );
 }
 
-/* Subcomponentes */
-function StatCard({ title, value, subtitle, color }) {
-  return (
-    <div className={`stat-card ${color}`}>
-      <div>
-        <div className="stat-title">{title}</div>
-        <div className="stat-value">{value}</div>
-      </div>
-      <div className="stat-subtitle">{subtitle}</div>
-    </div>
-  );
-}
-
-function MenuLink({ to, label }) {
-  return (
-    <li>
-      <Link to={to} className="menu-link">
-        {label}
-      </Link>
-    </li>
-  );
-}
-
+/* ==== SUBCOMPONENTES ==== */
 function MiniChart() {
   return (
-    <div className="chart">
-      <svg
-        viewBox="0 0 100 40"
-        preserveAspectRatio="none"
-        className="chart-svg"
-      >
+    <div className="w-full h-40">
+      <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="w-full h-full">
         <defs>
           <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.6" />
@@ -127,9 +132,9 @@ function MiniChart() {
 
 function InfoBox({ title, value }) {
   return (
-    <div className="info-box">
-      <div className="info-title">{title}</div>
-      <div className="info-value">{value}</div>
+    <div className="p-4 bg-gray-900/40 border border-gray-700 rounded-lg text-center">
+      <div className="text-xs text-gray-400">{title}</div>
+      <div className="text-lg font-semibold text-gray-100 mt-1">{value}</div>
     </div>
   );
 }
