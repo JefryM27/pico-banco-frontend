@@ -8,10 +8,8 @@ export async function login(credentials) {
     if (res.data?.token) {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("username", credentials.username);
-      // Guardar el userId si el backend lo devuelve
-      if (res.data?.userId) {
-        localStorage.setItem("userId", res.data.userId);
-      }
+      localStorage.setItem("userId", res.data.userId);
+      localStorage.setItem("accountNumber", res.data.accountNumber);
     }
     return res;
   } catch (err) {
@@ -32,6 +30,7 @@ export function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("username");
   localStorage.removeItem("userId");
+  localStorage.removeItem("accountNumber");
 }
 
 export function getToken() {
@@ -40,6 +39,10 @@ export function getToken() {
 
 export function getUserId() {
   return localStorage.getItem("userId");
+}
+
+export function getAccountNumber() {
+  return localStorage.getItem("accountNumber");
 }
 
 export function isAuthenticated() {

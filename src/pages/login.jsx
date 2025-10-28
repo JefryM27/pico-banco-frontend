@@ -5,7 +5,7 @@ import "./login.css";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -16,7 +16,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await authService.login({ username, password });
+      const res = await authService.login({ email, password });
       if (res?.status === 200) {
         navigate("/home");
       } else {
@@ -37,12 +37,13 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="login-form">
           <label>
-            Usuario
+            Correo
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="ej: juan"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ej: tu@email.com"
+              required
             />
           </label>
 
@@ -53,6 +54,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="tu contraseña"
+              required
             />
           </label>
 

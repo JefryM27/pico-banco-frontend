@@ -1,28 +1,267 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "../components/header.jsx";
+import api from "../hooks/useApi.js";
 
 export default function Profile() {
-  const [username] = useState(localStorage.getItem("username") || "Usuario");
+  const [name] = useState(localStorage.getItem("name") || "Usuario");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(null);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      const userId = localStorage.getItem("userId");
+      const accountNum = localStorage.getItem("accountNumber");
+
+      setAccountNumber(accountNum || "");
+
+      if (userId) {
+        const res = await api.get(`/users/${userId}`);
+        setFormData({
+          firstName: res.data.name || "",
+          lastName: res.data.last_name || "",
+          email: res.data.email || "",
+        });
+      }
+    } catch (err) {
+      console.error("Error cargando perfil:", err);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const updateProfile = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const userId = localStorage.getItem("userId");
+      await api.put(`/users/${userId}`, {
+        name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+      });
+      setMessage({ type: "success", text: "Perfil actualizado correctamente" });
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err?.response?.data?.message || "Error al actualizar",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changePassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setMessage({ type: "error", text: "Las contraseñas no coinciden" });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const userId = localStorage.getItem("userId");
+      await api.put(`/users/${userId}`, {
+        password: passwordData.newPassword,
+      });
+      setMessage({ type: "success", text: "Contraseña actualizada" });
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setShowPasswordForm(false);
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err?.response?.data?.message || "Error al cambiar contraseña",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b1220] to-[#08101a] text-gray-100">
       <Header />
 
-      <main className="max-w-4xl mx-auto px-8">
+      <main className="max-w-4xl mx-auto px-8 py-8">
         <header className="mb-8">
           <h2 className="text-3xl font-bold text-blue-400 mb-2">Mi Perfil</h2>
           <p className="text-gray-400 text-sm">Información de tu cuenta.</p>
         </header>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6 shadow-md">
-          <div className="space-y-4">
+        {message && (
+          <div
+            className={`mb-6 p-4 rounded-lg ${
+              message.type === "success"
+                ? "bg-green-500/10 border border-green-500/50 text-green-400"
+                : "bg-red-500/10 border border-red-500/50 text-red-400"
+            }`}
+          >
+            {message.text}
+          </div>
+        )}
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-8 shadow-md mb-6">
+          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Usuario
+                Nombre
               </label>
-              <p className="text-lg text-white">{username}</p>
+              <p className="text-lg text-white font-semibold">{name}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">
+                Número de Cuenta
+              </label>
+              <p className="text-lg text-white font-mono font-semibold">
+                {accountNumber}
+              </p>
             </div>
           </div>
+        </div>
+
+        <form
+          onSubmit={updateProfile}
+          className="bg-white/5 border border-white/10 rounded-xl p-8 shadow-md mb-6"
+        >
+          <h3 className="text-xl font-bold text-blue-400 mb-6">
+            Información Personal
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">
+                Nombre
+              </label>
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                placeholder="Tu nombre"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">
+                Apellido
+              </label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                placeholder="Tu apellido"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
+                Correo Electrónico
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="tu@email.com"
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg font-semibold transition"
+          >
+            {loading ? "Guardando..." : "Guardar Cambios"}
+          </button>
+        </form>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-8 shadow-md">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-blue-400">Seguridad</h3>
+            <button
+              onClick={() => setShowPasswordForm(!showPasswordForm)}
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-sm font-semibold transition"
+            >
+              {showPasswordForm ? "Cancelar" : "Cambiar Contraseña"}
+            </button>
+          </div>
+
+          {showPasswordForm && (
+            <form onSubmit={changePassword} className="space-y-4 mt-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Nueva Contraseña
+                </label>
+                <input
+                  type="password"
+                  name="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordChange}
+                  required
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Confirmar Contraseña
+                </label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={passwordData.confirmPassword}
+                  onChange={handlePasswordChange}
+                  required
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full px-6 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 rounded-lg font-semibold transition"
+              >
+                {loading ? "Cambiando..." : "Cambiar Contraseña"}
+              </button>
+            </form>
+          )}
         </div>
 
         <footer className="text-center text-gray-500 text-sm mt-10 pb-6">

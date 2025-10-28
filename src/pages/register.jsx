@@ -5,7 +5,8 @@ import "./login.css";
 
 export default function Register() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -18,7 +19,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const res = await authService.register({ username, password });
+      const res = await authService.register({ name, email, password });
       if (res?.status === 201 || res?.status === 200) {
         setSuccess(true);
         setTimeout(() => navigate("/login"), 1500);
@@ -43,11 +44,22 @@ export default function Register() {
 
         <form onSubmit={handleSubmit} className="login-form">
           <label>
-            Correo o Usuario
+            Nombre
             <input
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="ej: Juan"
+              required
+            />
+          </label>
+
+          <label>
+            Correo
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="ej: juan@ejemplo.com"
               required
             />
