@@ -10,6 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.1.16",
     "axios": "^1.6.8",
     "dompurify": "^3.0.6",
     "js-cookie": "^3.0.5",
