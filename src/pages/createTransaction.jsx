@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "../components/header.jsx";
 import * as txService from "../services/transaction.service";
 
@@ -16,7 +16,7 @@ function escapeHtml(html = "") {
 }
 
 export default function CreateTransaction() {
-  const [senderId, setSenderId] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
   const [receiverId, setReceiverId] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -25,10 +25,33 @@ export default function CreateTransaction() {
   const [showPreview, setShowPreview] = useState(false);
   const [errorFields, setErrorFields] = useState({});
 
+  useEffect(() => {
+    loadCurrentUser();
+  }, []);
+
+  const loadCurrentUser = () => {
+    try {
+      const userId = localStorage.getItem("userId");
+      const name = localStorage.getItem("name");
+      const email = localStorage.getItem("email");
+      const accountNumber = localStorage.getItem("accountNumber");
+
+      setCurrentUser({
+        id: userId,
+        name,
+        email,
+        accountNumber,
+      });
+    } catch (err) {
+      console.error("Error cargando usuario actual:", err);
+    }
+  };
+
   function validate() {
     const errors = {};
-    if (!senderId?.trim()) errors.senderId = "Sender ID requerido";
-    if (!receiverId?.trim()) errors.receiverId = "Receiver ID requerido";
+    if (!receiverId?.trim()) errors.receiverId = "Cuenta destino requerida";
+    if (receiverId === currentUser?.id.toString())
+      errors.receiverId = "No puedes enviar a tu propia cuenta";
     if (!amount?.toString().trim()) errors.amount = "Monto requerido";
     if (isNaN(Number(amount)) || Number(amount) <= 0)
       errors.amount = "El monto debe ser un número positivo";
@@ -45,19 +68,19 @@ export default function CreateTransaction() {
     setLoading(true);
     try {
       await txService.create({
-        senderId: senderId.trim(),
+        senderId: currentUser.id,
         receiverId: receiverId.trim(),
         amount: Number(amount),
         description: description,
       });
       setMsg({ type: "success", text: "Transacción creada correctamente." });
-      setSenderId("");
       setReceiverId("");
       setAmount("");
       setDescription("");
       setErrorFields({});
     } catch (err) {
-      const detail = err?.response?.data?.message || err?.message || String(err);
+      const detail =
+        err?.response?.data?.message || err?.message || String(err);
       setMsg({ type: "error", text: "Error creando transacción: " + detail });
     } finally {
       setLoading(false);
@@ -72,7 +95,9 @@ export default function CreateTransaction() {
 
       <main className="max-w-4xl mx-auto px-8 py-6">
         <header className="mb-8">
-          <h2 className="text-3xl font-bold text-blue-400 mb-2">Nueva Transacción</h2>
+          <h2 className="text-3xl font-bold text-blue-400 mb-2">
+            Nueva Transacción
+          </h2>
           <p className="text-gray-400 text-sm">
             Completa los campos para registrar una nueva transacción.
           </p>
@@ -80,42 +105,48 @@ export default function CreateTransaction() {
 
         <div className="bg-white/5 border border-white/10 rounded-xl p-6 shadow-md">
           <form onSubmit={onSubmit} className="space-y-5">
+            {/* Cuenta Origen - Solo lectura */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Sender ID <span className="text-red-400">*</span>
+                Cuenta Origen
               </label>
-              <input
-                type="text"
-                value={senderId}
-                onChange={(e) => setSenderId(e.target.value)}
-                placeholder="ID de la cuenta origen"
-                className={`w-full px-4 py-2 bg-gray-900 border ${
-                  errorFields.senderId ? "border-red-500" : "border-gray-700"
-                } rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-100`}
-              />
-              {errorFields.senderId && (
-                <p className="text-red-400 text-xs mt-1">{errorFields.senderId}</p>
-              )}
+              <div className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100">
+                {currentUser ? (
+                  <div>
+                    <p className="font-semibold">{currentUser.name}</p>
+                    <p className="text-sm text-gray-400">{currentUser.email}</p>
+                    <p className="text-sm text-gray-500 font-mono">
+                      {currentUser.accountNumber}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Cargando...</p>
+                )}
+              </div>
             </div>
 
+            {/* Cuenta Destino - Input texto */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Receiver ID <span className="text-red-400">*</span>
+                Cuenta Destino <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
                 value={receiverId}
                 onChange={(e) => setReceiverId(e.target.value)}
-                placeholder="ID de la cuenta destino"
+                placeholder="Ingresa el ID de la cuenta destino"
                 className={`w-full px-4 py-2 bg-gray-900 border ${
                   errorFields.receiverId ? "border-red-500" : "border-gray-700"
                 } rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-100`}
               />
               {errorFields.receiverId && (
-                <p className="text-red-400 text-xs mt-1">{errorFields.receiverId}</p>
+                <p className="text-red-400 text-xs mt-1">
+                  {errorFields.receiverId}
+                </p>
               )}
             </div>
 
+            {/* Monto */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Monto <span className="text-red-400">*</span>
@@ -131,10 +162,13 @@ export default function CreateTransaction() {
                 } rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-100`}
               />
               {errorFields.amount && (
-                <p className="text-red-400 text-xs mt-1">{errorFields.amount}</p>
+                <p className="text-red-400 text-xs mt-1">
+                  {errorFields.amount}
+                </p>
               )}
             </div>
 
+            {/* Descripción */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Descripción
@@ -203,7 +237,7 @@ export default function CreateTransaction() {
                 ×
               </button>
             </div>
-            
+
             <div className="p-6">
               <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 min-h-[150px] max-h-[400px] overflow-auto">
                 {sanitized ? (
@@ -212,12 +246,15 @@ export default function CreateTransaction() {
                     dangerouslySetInnerHTML={{ __html: sanitized }}
                   />
                 ) : (
-                  <p className="text-gray-500 italic">Sin contenido para mostrar</p>
+                  <p className="text-gray-500 italic">
+                    Sin contenido para mostrar
+                  </p>
                 )}
               </div>
-              
+
               <div className="mt-4 text-xs text-gray-500">
-                <strong>Nota:</strong> Los scripts han sido eliminados por seguridad
+                <strong>Nota:</strong> Los scripts han sido eliminados por
+                seguridad
               </div>
             </div>
 
