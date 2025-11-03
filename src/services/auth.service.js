@@ -7,9 +7,11 @@ export async function login(credentials) {
     const res = await axios.post(`${API_URL}/login`, credentials);
     if (res.data?.token) {
       localStorage.setItem("token", res.data.token);
-      localStorage.setItem("username", credentials.username);
+      localStorage.setItem("username", res.data.username); // Del response, no de credentials
       localStorage.setItem("userId", res.data.userId);
-      localStorage.setItem("accountNumber", res.data.accountNumber);
+      if (res.data?.accountNumber) {
+        localStorage.setItem("accountNumber", res.data.accountNumber);
+      }
     }
     return res;
   } catch (err) {

@@ -5,26 +5,41 @@ import "./login.css";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   async function handleSubmit(e) {
     e.preventDefault();
+    console.log("🔵 Formulario enviado");
     setError(null);
     setLoading(true);
 
     try {
-      const res = await authService.login({ email, password });
+      console.log("🔵 Intentando login con:", { username, password });
+      const res = await authService.login({ username, password });
+      console.log("🔵 Respuesta completa:", res);
+      console.log("🔵 res.data:", res.data);
+      console.log("🔵 res.status:", res.status);
+      
       if (res?.status === 200) {
+        console.log("✅ Login exitoso");
+        console.log("📦 LocalStorage token:", localStorage.getItem("token"));
+        console.log("📦 LocalStorage username:", localStorage.getItem("username"));
+        console.log("📦 LocalStorage userId:", localStorage.getItem("userId"));
+        console.log("🚀 Intentando navegar a /home...");
         navigate("/home");
+        console.log("✅ Navigate ejecutado");
       } else {
+        console.log("❌ Status diferente de 200:", res?.status);
         setError("Credenciales incorrectas o error de conexión.");
       }
     } catch (err) {
+      console.error("❌ Error en login:", err);
       setError("Error al iniciar sesión. Inténtalo nuevamente.");
     } finally {
+      console.log("🏁 Finally ejecutado");
       setLoading(false);
     }
   }
@@ -37,12 +52,12 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="login-form">
           <label>
-            Correo
+            Usuario
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="ej: tu@email.com"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="ej: juan"
               required
             />
           </label>
