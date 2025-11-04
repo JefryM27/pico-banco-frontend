@@ -24,17 +24,34 @@ export default function Home() {
     try {
       const userId = localStorage.getItem("userId");
       if (userId) {
+        // Cargar balance real desde el backend
+        const balanceRes = await txService.getMyBalance();
         const txRes = await txService.getByUser(userId);
         const transactions = txRes.data || [];
-        setRecentTx(transactions.slice(0, 5));
+
+        // Calcular estadísticas
+        const today = new Date().toISOString().split("T")[0];
+        const sentToday = transactions.filter(
+          (t) =>
+            t.sender_user_id === parseInt(userId) &&
+            t.created_at.startsWith(today)
+        ).length;
+
+        const receivedToday = transactions.filter(
+          (t) =>
+            t.receiver_user_id === parseInt(userId) &&
+            t.created_at.startsWith(today)
+        ).length;
 
         setStats({
-          balance: 1000,
+          balance: balanceRes.data?.balance || 0,
           totalTransactions: transactions.length,
-          sentToday: 0,
-          receivedToday: 0,
+          sentToday,
+          receivedToday,
           pendingCount: 0,
         });
+
+        setRecentTx(transactions.slice(0, 5));
       }
     } catch (err) {
       console.error("Error cargando dashboard:", err);

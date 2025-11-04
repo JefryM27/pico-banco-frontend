@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Header from "../components/header.jsx";
 import * as txService from "../services/transaction.service";
-import axios from "axios"; // Importar axios directamente
+import axios from "axios";
 
 function stripScriptTags(html = "") {
   return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
@@ -9,7 +9,7 @@ function stripScriptTags(html = "") {
 
 export default function CreateTransaction() {
   const myAccountNumber = localStorage.getItem("accountNumber") || "";
-  
+
   const [receiverAccount, setReceiverAccount] = useState("");
   const [accountValid, setAccountValid] = useState(null);
   const [accountHolder, setAccountHolder] = useState("");
@@ -30,19 +30,21 @@ export default function CreateTransaction() {
 
     setValidating(true);
     try {
-      // Usar axios directamente sin token
       const res = await axios.get(
         `http://localhost:4000/api/transactions/validate/${accountNum}`
       );
-      if (res.data.exists) {
+
+      console.log("✅ Respuesta completa:", res.data);
+
+      if (res.data.valid === true) {
         setAccountValid(true);
-        setAccountHolder(res.data.accountHolder);
+        setAccountHolder(res.data.user?.name || "Usuario");
       } else {
         setAccountValid(false);
         setAccountHolder("");
       }
     } catch (err) {
-      console.error("Error validando cuenta:", err);
+      console.error("❌ Error validando cuenta:", err);
       setAccountValid(false);
       setAccountHolder("");
     } finally {
@@ -54,7 +56,7 @@ export default function CreateTransaction() {
     setReceiverAccount(value);
     setAccountValid(null);
     setAccountHolder("");
-    
+
     clearTimeout(window.validateTimeout);
     window.validateTimeout = setTimeout(() => {
       validateAccount(value);
@@ -63,7 +65,8 @@ export default function CreateTransaction() {
 
   function validate() {
     const errors = {};
-    if (!receiverAccount?.trim()) errors.receiverAccount = "Cuenta destino requerida";
+    if (!receiverAccount?.trim())
+      errors.receiverAccount = "Cuenta destino requerida";
     if (accountValid === false) errors.receiverAccount = "La cuenta no existe";
     if (!amount?.toString().trim()) errors.amount = "Monto requerido";
     if (isNaN(Number(amount)) || Number(amount) <= 0)
@@ -88,9 +91,9 @@ export default function CreateTransaction() {
         amount: Number(amount),
         description: description,
       });
-      setMsg({ 
-        type: "success", 
-        text: `Transacción exitosa. Nuevo saldo: $${res.data.newBalance?.toFixed(2)}` 
+      setMsg({
+        type: "success",
+        text: `Transacción exitosa. Nuevo saldo: $${res.data.newBalance?.toFixed(2)}`,
       });
       setReceiverAccount("");
       setAmount("");
@@ -114,7 +117,9 @@ export default function CreateTransaction() {
 
       <main className="max-w-4xl mx-auto px-8 py-6">
         <header className="mb-8">
-          <h2 className="text-3xl font-bold text-blue-400 mb-2">Nueva Transacción</h2>
+          <h2 className="text-3xl font-bold text-blue-400 mb-2">
+            Nueva Transacción
+          </h2>
           <p className="text-gray-400 text-sm">
             Completa los campos para registrar una nueva transacción.
           </p>
@@ -145,34 +150,38 @@ export default function CreateTransaction() {
                 onChange={(e) => handleReceiverChange(e.target.value)}
                 placeholder="Ej: CR1234567890123456"
                 className={`w-full px-4 py-2 bg-gray-900 border ${
-                  errorFields.receiverAccount 
-                    ? "border-red-500" 
-                    : accountValid === true 
-                    ? "border-green-500" 
-                    : accountValid === false 
+                  errorFields.receiverAccount
                     ? "border-red-500"
-                    : "border-gray-700"
+                    : accountValid === true
+                      ? "border-green-500"
+                      : accountValid === false
+                        ? "border-red-500"
+                        : "border-gray-700"
                 } rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-100`}
               />
-              
+
               {validating && (
-                <p className="text-blue-400 text-xs mt-1">Validando cuenta...</p>
+                <p className="text-blue-400 text-xs mt-1">
+                  Validando cuenta...
+                </p>
               )}
-              
+
               {accountValid === true && accountHolder && (
                 <p className="text-green-400 text-xs mt-1">
                   ✓ Cuenta válida - Titular: {accountHolder}
                 </p>
               )}
-              
+
               {accountValid === false && (
                 <p className="text-red-400 text-xs mt-1">
                   ✗ Esta cuenta no existe
                 </p>
               )}
-              
+
               {errorFields.receiverAccount && (
-                <p className="text-red-400 text-xs mt-1">{errorFields.receiverAccount}</p>
+                <p className="text-red-400 text-xs mt-1">
+                  {errorFields.receiverAccount}
+                </p>
               )}
             </div>
 
@@ -181,7 +190,9 @@ export default function CreateTransaction() {
                 Monto <span className="text-red-400">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                  $
+                </span>
                 <input
                   type="number"
                   step="0.01"
@@ -194,7 +205,9 @@ export default function CreateTransaction() {
                 />
               </div>
               {errorFields.amount && (
-                <p className="text-red-400 text-xs mt-1">{errorFields.amount}</p>
+                <p className="text-red-400 text-xs mt-1">
+                  {errorFields.amount}
+                </p>
               )}
             </div>
 
@@ -251,7 +264,6 @@ export default function CreateTransaction() {
         </footer>
       </main>
 
-      {/* Modal de vista previa */}
       {showPreview && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 border border-blue-500/50 rounded-xl shadow-2xl w-full max-w-2xl animate-fadeIn">
@@ -266,7 +278,7 @@ export default function CreateTransaction() {
                 ×
               </button>
             </div>
-            
+
             <div className="p-6">
               <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 min-h-[150px] max-h-[400px] overflow-auto">
                 {sanitized ? (
@@ -275,12 +287,15 @@ export default function CreateTransaction() {
                     dangerouslySetInnerHTML={{ __html: sanitized }}
                   />
                 ) : (
-                  <p className="text-gray-500 italic">Sin contenido para mostrar</p>
+                  <p className="text-gray-500 italic">
+                    Sin contenido para mostrar
+                  </p>
                 )}
               </div>
-              
+
               <div className="mt-4 text-xs text-gray-500">
-                <strong>Nota:</strong> Los scripts han sido eliminados por seguridad
+                <strong>Nota:</strong> Los scripts han sido eliminados por
+                seguridad
               </div>
             </div>
 
