@@ -1,60 +1,75 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Header from "../components/header.jsx";
 import * as txService from "../services/transaction.service";
+import axios from "axios"; // Importar axios directamente
 
 function stripScriptTags(html = "") {
   return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
 }
 
-function escapeHtml(html = "") {
-  return html
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 export default function CreateTransaction() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [receiverId, setReceiverId] = useState("");
+  const myAccountNumber = localStorage.getItem("accountNumber") || "";
+  
+  const [receiverAccount, setReceiverAccount] = useState("");
+  const [accountValid, setAccountValid] = useState(null);
+  const [accountHolder, setAccountHolder] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [msg, setMsg] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [errorFields, setErrorFields] = useState({});
 
-  useEffect(() => {
-    loadCurrentUser();
-  }, []);
-
-  const loadCurrentUser = () => {
-    try {
-      const userId = localStorage.getItem("userId");
-      const name = localStorage.getItem("name");
-      const email = localStorage.getItem("email");
-      const accountNumber = localStorage.getItem("accountNumber");
-
-      setCurrentUser({
-        id: userId,
-        name,
-        email,
-        accountNumber,
-      });
-    } catch (err) {
-      console.error("Error cargando usuario actual:", err);
+  async function validateAccount(accountNum) {
+    if (!accountNum || accountNum.length < 10) {
+      setAccountValid(null);
+      setAccountHolder("");
+      return;
     }
-  };
+
+    setValidating(true);
+    try {
+      // Usar axios directamente sin token
+      const res = await axios.get(
+        `http://localhost:4000/api/transactions/validate/${accountNum}`
+      );
+      if (res.data.exists) {
+        setAccountValid(true);
+        setAccountHolder(res.data.accountHolder);
+      } else {
+        setAccountValid(false);
+        setAccountHolder("");
+      }
+    } catch (err) {
+      console.error("Error validando cuenta:", err);
+      setAccountValid(false);
+      setAccountHolder("");
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  function handleReceiverChange(value) {
+    setReceiverAccount(value);
+    setAccountValid(null);
+    setAccountHolder("");
+    
+    clearTimeout(window.validateTimeout);
+    window.validateTimeout = setTimeout(() => {
+      validateAccount(value);
+    }, 500);
+  }
 
   function validate() {
     const errors = {};
-    if (!receiverId?.trim()) errors.receiverId = "Cuenta destino requerida";
-    if (receiverId === currentUser?.id.toString())
-      errors.receiverId = "No puedes enviar a tu propia cuenta";
+    if (!receiverAccount?.trim()) errors.receiverAccount = "Cuenta destino requerida";
+    if (accountValid === false) errors.receiverAccount = "La cuenta no existe";
     if (!amount?.toString().trim()) errors.amount = "Monto requerido";
     if (isNaN(Number(amount)) || Number(amount) <= 0)
       errors.amount = "El monto debe ser un número positivo";
+    if (receiverAccount === myAccountNumber)
+      errors.receiverAccount = "No puedes transferir a tu propia cuenta";
     return errors;
   }
 
@@ -67,21 +82,25 @@ export default function CreateTransaction() {
 
     setLoading(true);
     try {
-      await txService.create({
-        senderId: currentUser.id,
-        receiverId: receiverId.trim(),
+      const res = await txService.create({
+        senderAccount: myAccountNumber,
+        receiverAccount: receiverAccount.trim(),
         amount: Number(amount),
         description: description,
       });
-      setMsg({ type: "success", text: "Transacción creada correctamente." });
-      setReceiverId("");
+      setMsg({ 
+        type: "success", 
+        text: `Transacción exitosa. Nuevo saldo: $${res.data.newBalance?.toFixed(2)}` 
+      });
+      setReceiverAccount("");
       setAmount("");
       setDescription("");
+      setAccountValid(null);
+      setAccountHolder("");
       setErrorFields({});
     } catch (err) {
-      const detail =
-        err?.response?.data?.message || err?.message || String(err);
-      setMsg({ type: "error", text: "Error creando transacción: " + detail });
+      const detail = err?.response?.data?.error || err?.message || String(err);
+      setMsg({ type: "error", text: detail });
     } finally {
       setLoading(false);
     }
@@ -95,9 +114,7 @@ export default function CreateTransaction() {
 
       <main className="max-w-4xl mx-auto px-8 py-6">
         <header className="mb-8">
-          <h2 className="text-3xl font-bold text-blue-400 mb-2">
-            Nueva Transacción
-          </h2>
+          <h2 className="text-3xl font-bold text-blue-400 mb-2">Nueva Transacción</h2>
           <p className="text-gray-400 text-sm">
             Completa los campos para registrar una nueva transacción.
           </p>
@@ -105,70 +122,82 @@ export default function CreateTransaction() {
 
         <div className="bg-white/5 border border-white/10 rounded-xl p-6 shadow-md">
           <form onSubmit={onSubmit} className="space-y-5">
-            {/* Cuenta Origen - Solo lectura */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Cuenta Origen
               </label>
-              <div className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-100">
-                {currentUser ? (
-                  <div>
-                    <p className="font-semibold">{currentUser.name}</p>
-                    <p className="text-sm text-gray-400">{currentUser.email}</p>
-                    <p className="text-sm text-gray-500 font-mono">
-                      {currentUser.accountNumber}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-gray-500">Cargando...</p>
-                )}
-              </div>
+              <input
+                type="text"
+                value={myAccountNumber}
+                disabled
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-400 cursor-not-allowed"
+              />
+              <p className="text-xs text-gray-500 mt-1">Tu cuenta</p>
             </div>
 
-            {/* Cuenta Destino - Input texto */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Cuenta Destino <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
-                value={receiverId}
-                onChange={(e) => setReceiverId(e.target.value)}
-                placeholder="Ingresa el ID de la cuenta destino"
+                value={receiverAccount}
+                onChange={(e) => handleReceiverChange(e.target.value)}
+                placeholder="Ej: CR1234567890123456"
                 className={`w-full px-4 py-2 bg-gray-900 border ${
-                  errorFields.receiverId ? "border-red-500" : "border-gray-700"
+                  errorFields.receiverAccount 
+                    ? "border-red-500" 
+                    : accountValid === true 
+                    ? "border-green-500" 
+                    : accountValid === false 
+                    ? "border-red-500"
+                    : "border-gray-700"
                 } rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-100`}
               />
-              {errorFields.receiverId && (
-                <p className="text-red-400 text-xs mt-1">
-                  {errorFields.receiverId}
+              
+              {validating && (
+                <p className="text-blue-400 text-xs mt-1">Validando cuenta...</p>
+              )}
+              
+              {accountValid === true && accountHolder && (
+                <p className="text-green-400 text-xs mt-1">
+                  ✓ Cuenta válida - Titular: {accountHolder}
                 </p>
+              )}
+              
+              {accountValid === false && (
+                <p className="text-red-400 text-xs mt-1">
+                  ✗ Esta cuenta no existe
+                </p>
+              )}
+              
+              {errorFields.receiverAccount && (
+                <p className="text-red-400 text-xs mt-1">{errorFields.receiverAccount}</p>
               )}
             </div>
 
-            {/* Monto */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Monto <span className="text-red-400">*</span>
               </label>
-              <input
-                type="number"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="Monto (ej: 100.50)"
-                className={`w-full px-4 py-2 bg-gray-900 border ${
-                  errorFields.amount ? "border-red-500" : "border-gray-700"
-                } rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-100`}
-              />
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className={`w-full pl-8 pr-4 py-2 bg-gray-900 border ${
+                    errorFields.amount ? "border-red-500" : "border-gray-700"
+                  } rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-100`}
+                />
+              </div>
               {errorFields.amount && (
-                <p className="text-red-400 text-xs mt-1">
-                  {errorFields.amount}
-                </p>
+                <p className="text-red-400 text-xs mt-1">{errorFields.amount}</p>
               )}
             </div>
 
-            {/* Descripción */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Descripción
@@ -196,10 +225,10 @@ export default function CreateTransaction() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || accountValid !== true}
                 className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Creando..." : "Crear Transacción"}
+                {loading ? "Procesando..." : "Crear Transacción"}
               </button>
             </div>
           </form>
@@ -237,7 +266,7 @@ export default function CreateTransaction() {
                 ×
               </button>
             </div>
-
+            
             <div className="p-6">
               <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 min-h-[150px] max-h-[400px] overflow-auto">
                 {sanitized ? (
@@ -246,15 +275,12 @@ export default function CreateTransaction() {
                     dangerouslySetInnerHTML={{ __html: sanitized }}
                   />
                 ) : (
-                  <p className="text-gray-500 italic">
-                    Sin contenido para mostrar
-                  </p>
+                  <p className="text-gray-500 italic">Sin contenido para mostrar</p>
                 )}
               </div>
-
+              
               <div className="mt-4 text-xs text-gray-500">
-                <strong>Nota:</strong> Los scripts han sido eliminados por
-                seguridad
+                <strong>Nota:</strong> Los scripts han sido eliminados por seguridad
               </div>
             </div>
 
