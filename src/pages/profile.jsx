@@ -3,15 +3,12 @@ import Header from "../components/header.jsx";
 import api from "../hooks/useApi.js";
 
 export default function Profile() {
-  const [name] = useState(localStorage.getItem("name") || "Usuario");
   const [accountNumber, setAccountNumber] = useState("");
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    name: "",
     email: "",
   });
   const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
@@ -33,8 +30,7 @@ export default function Profile() {
       if (userId) {
         const res = await api.get(`/users/${userId}`);
         setFormData({
-          firstName: res.data.name || "",
-          lastName: res.data.last_name || "",
+          name: res.data.name || "",
           email: res.data.email || "",
         });
       }
@@ -61,10 +57,10 @@ export default function Profile() {
     try {
       const userId = localStorage.getItem("userId");
       await api.put(`/users/${userId}`, {
-        name: formData.firstName,
-        last_name: formData.lastName,
+        name: formData.name,
         email: formData.email,
       });
+      localStorage.setItem("username", formData.name);
       setMessage({ type: "success", text: "Perfil actualizado correctamente" });
     } catch (err) {
       setMessage({
@@ -89,12 +85,11 @@ export default function Profile() {
 
     try {
       const userId = localStorage.getItem("userId");
-      await api.put(`/users/${userId}`, {
+      await api.put(`/users/${userId}/password`, {
         password: passwordData.newPassword,
       });
       setMessage({ type: "success", text: "Contraseña actualizada" });
       setPasswordData({
-        currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
@@ -135,9 +130,20 @@ export default function Profile() {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Nombre
+                Nombre Completo
               </label>
-              <p className="text-lg text-white font-semibold">{name}</p>
+              <p className="text-lg text-white font-semibold">
+                {formData.name || "Cargando..."}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">
+                Correo Electrónico
+              </label>
+              <p className="text-lg text-white">
+                {formData.email || "Cargando..."}
+              </p>
             </div>
 
             <div>
@@ -145,7 +151,7 @@ export default function Profile() {
                 Número de Cuenta
               </label>
               <p className="text-lg text-white font-mono font-semibold">
-                {accountNumber}
+                {accountNumber || "No disponible"}
               </p>
             </div>
           </div>
@@ -156,39 +162,26 @@ export default function Profile() {
           className="bg-white/5 border border-white/10 rounded-xl p-8 shadow-md mb-6"
         >
           <h3 className="text-xl font-bold text-blue-400 mb-6">
-            Información Personal
+            Editar Información Personal
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="space-y-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-2">
-                Nombre
+                Nombre Completo
               </label>
               <input
                 type="text"
-                name="firstName"
-                value={formData.firstName}
+                name="name"
+                value={formData.name}
                 onChange={handleInputChange}
-                placeholder="Tu nombre"
+                placeholder="Tu nombre completo"
+                required
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
-                Apellido
-              </label>
-              <input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                placeholder="Tu apellido"
-                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-400 mb-2">
                 Correo Electrónico
               </label>
@@ -198,6 +191,7 @@ export default function Profile() {
                 value={formData.email}
                 onChange={handleInputChange}
                 placeholder="tu@email.com"
+                required
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -235,6 +229,7 @@ export default function Profile() {
                   value={passwordData.newPassword}
                   onChange={handlePasswordChange}
                   required
+                  placeholder="Mínimo 6 caracteres"
                   className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -249,6 +244,7 @@ export default function Profile() {
                   value={passwordData.confirmPassword}
                   onChange={handlePasswordChange}
                   required
+                  placeholder="Repite la contraseña"
                   className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                 />
               </div>

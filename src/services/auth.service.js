@@ -7,7 +7,8 @@ export async function login(credentials) {
     const res = await axios.post(`${API_URL}/login`, credentials);
     if (res.data?.token) {
       localStorage.setItem("token", res.data.token);
-      localStorage.setItem("username", res.data.username); // Del response, no de credentials
+      localStorage.setItem("username", res.data.name);
+      localStorage.setItem("email", res.data.username);
       localStorage.setItem("userId", res.data.userId);
       if (res.data?.accountNumber) {
         localStorage.setItem("accountNumber", res.data.accountNumber);
@@ -31,6 +32,7 @@ export async function register(data) {
 export function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("username");
+  localStorage.removeItem("email");
   localStorage.removeItem("userId");
   localStorage.removeItem("accountNumber");
 }
