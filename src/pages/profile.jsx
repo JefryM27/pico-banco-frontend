@@ -1,3 +1,12 @@
+// src/pages/Profile.jsx
+/*
+  VULNERABILIDADES IMPLEMENTADAS:
+  - A01:2021 Broken Access Control (IDOR): Puede modificar perfil de otros usuarios cambiando userId
+  - A02:2021 Cryptographic Failures: userId y accountNumber en localStorage sin cifrar
+  - A05:2021 Security Misconfiguration: Sin validación de password débil, permite cambio sin password actual
+  - A07:2021 Identification and Authentication Failures: Cambio de password sin verificar password actual
+  - A09:2021 Security Logging and Monitoring Failures: Sin logging de cambios de perfil/password
+*/
 import React, { useState, useEffect } from "react";
 import Header from "../components/header.jsx";
 import api from "../hooks/useApi.js";
@@ -20,14 +29,22 @@ export default function Profile() {
     loadProfile();
   }, []);
 
+  // VULNERABLE A02:2021 - Cryptographic Failures
+  // VULNERABLE A01:2021 - Broken Access Control (IDOR)
   const loadProfile = async () => {
     try {
+      // VULNERABLE A02: userId de localStorage sin cifrar
+      // VULNERABLE A01: Puede cambiar userId en localStorage para ver otros perfiles
+      // localStorage.setItem('userId', '999') y recarga la página
       const userId = localStorage.getItem("userId");
       const accountNum = localStorage.getItem("accountNumber");
 
+      // VULNERABLE A02: accountNumber almacenado sin cifrar
       setAccountNumber(accountNum || "");
 
       if (userId) {
+        // VULNERABLE A01: GET /users/:userId sin verificar ownership
+        // Backend debería validar que req.user.sub === userId
         const res = await api.get(`/users/${userId}`);
         setFormData({
           name: res.data.name || "",
@@ -35,6 +52,8 @@ export default function Profile() {
         });
       }
     } catch (err) {
+      // VULNERABLE A09:2021 - Security Logging Failures
+      // console.error visible en producción
       console.error("Error cargando perfil:", err);
     }
   };
@@ -49,18 +68,34 @@ export default function Profile() {
     setPasswordData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // VULNERABLE A01:2021 - Broken Access Control (IDOR - CRÍTICO)
+  // VULNERABLE A09: Sin logging de cambios de perfil
   const updateProfile = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
 
+    // VULNERABLE A05:2021 - Security Misconfiguration
+    // Sin validación de formato de email
+    // Sin validación de longitud de name
+    // Sin sanitización de inputs
+
     try {
+      // VULNERABLE A01: PUT /users/:userId sin verificar ownership
+      // Puede modificar perfil de otros usuarios:
+      // 1. Cambiar userId en localStorage
+      // 2. Modificar name/email del otro usuario
       const userId = localStorage.getItem("userId");
       await api.put(`/users/${userId}`, {
-        name: formData.name,
-        email: formData.email,
+        name: formData.name, // VULNERABLE: Sin sanitizar
+        email: formData.email, // VULNERABLE: Sin validar formato
       });
+
+      // VULNERABLE A02: Actualiza localStorage con datos sin cifrar
       localStorage.setItem("username", formData.name);
+
+      // VULNERABLE A09: Cambio de perfil sin logging
+      // No registra: qué cambió, timestamp, IP, userId original
       setMessage({ type: "success", text: "Perfil actualizado correctamente" });
     } catch (err) {
       setMessage({
@@ -72,28 +107,48 @@ export default function Profile() {
     }
   };
 
+  // VULNERABLE A07:2021 - Identification and Authentication Failures (CRÍTICO)
+  // VULNERABLE A05:2021 - Security Misconfiguration (CRÍTICO)
+  // Cambio de contraseña SIN verificar contraseña actual
+  // VULNERABLE A09: Sin logging de cambios de password
   const changePassword = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
 
+    // VULNERABLE A05: Solo valida que coincidan, no la complejidad
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setMessage({ type: "error", text: "Las contraseñas no coinciden" });
       setLoading(false);
       return;
     }
 
+    // VULNERABLE A05: Sin validación de complejidad de password
+    // Acepta passwords débiles: "1", "123", "aaa"
+    // Sin requisitos: longitud mínima, mayúsculas, números, símbolos
+
     try {
+      // VULNERABLE A07: Cambio de password SIN pedir password actual
+      // Si alguien deja sesión abierta, cualquiera puede cambiar el password
+      // VULNERABLE A01: PUT /users/:userId/password sin verificar ownership
       const userId = localStorage.getItem("userId");
       await api.put(`/users/${userId}/password`, {
-        password: passwordData.newPassword,
+        password: passwordData.newPassword, // VULNERABLE: Password débil aceptado
       });
+
+      // VULNERABLE A09: Cambio crítico de password sin logging
+      // Debería registrar: timestamp, IP, dispositivo, notificar por email
       setMessage({ type: "success", text: "Contraseña actualizada" });
+
       setPasswordData({
         newPassword: "",
         confirmPassword: "",
       });
       setShowPasswordForm(false);
+
+      // VULNERABLE A07: No invalida sesiones existentes
+      // No fuerza re-login después de cambiar password
+      // Otras sesiones activas siguen funcionando
     } catch (err) {
       setMessage({
         type: "error",
@@ -122,6 +177,7 @@ export default function Profile() {
                 : "bg-red-500/10 border border-red-500/50 text-red-400"
             }`}
           >
+            {/* VULNERABLE A03: message.text puede contener HTML */}
             {message.text}
           </div>
         )}
@@ -132,6 +188,7 @@ export default function Profile() {
               <label className="block text-sm font-medium text-gray-400 mb-2">
                 Nombre Completo
               </label>
+              {/* VULNERABLE A03: formData.name puede contener HTML/XSS */}
               <p className="text-lg text-white font-semibold">
                 {formData.name || "Cargando..."}
               </p>
@@ -150,6 +207,7 @@ export default function Profile() {
               <label className="block text-sm font-medium text-gray-400 mb-2">
                 Número de Cuenta
               </label>
+              {/* VULNERABLE A02: accountNumber visible sin cifrar */}
               <p className="text-lg text-white font-mono font-semibold">
                 {accountNumber || "No disponible"}
               </p>
@@ -170,6 +228,7 @@ export default function Profile() {
               <label className="block text-sm font-medium text-gray-400 mb-2">
                 Nombre Completo
               </label>
+              {/* VULNERABLE A05: Sin validación de formato */}
               <input
                 type="text"
                 name="name"
@@ -185,6 +244,7 @@ export default function Profile() {
               <label className="block text-sm font-medium text-gray-400 mb-2">
                 Correo Electrónico
               </label>
+              {/* VULNERABLE A05: Solo validación HTML5 básica */}
               <input
                 type="email"
                 name="email"
@@ -223,6 +283,8 @@ export default function Profile() {
                 <label className="block text-sm font-medium text-gray-400 mb-2">
                   Nueva Contraseña
                 </label>
+                {/* VULNERABLE A05: Solo placeholder sugiere "mínimo 6" pero no valida */}
+                {/* VULNERABLE A07: Sin campo para password actual */}
                 <input
                   type="password"
                   name="newPassword"

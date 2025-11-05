@@ -1,10 +1,24 @@
+// src/pages/home.jsx
+/*
+  VULNERABILIDADES IMPLEMENTADAS:
+  - A02:2021 Cryptographic Failures: username y userId en localStorage sin cifrar
+  - A07:2021 Identification and Authentication Failures: Confía en datos de localStorage manipulables
+  - A08:2021 Software and Data Integrity Failures: Sin validación de datos del backend
+  - A09:2021 Security Logging Failures: console.error expuesto, sin logging de accesos
+*/
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/header.jsx";
 import * as txService from "../services/transaction.service";
 
 export default function Home() {
+  // VULNERABLE A02:2021 - Cryptographic Failures
+  // VULNERABLE A07:2021 - Identification and Authentication Failures
+  // username obtenido de localStorage sin cifrar
+  // Puede ser manipulado desde consola del navegador
+  // localStorage.setItem('username', '<script>alert("XSS")</script>')
   const username = localStorage.getItem("username") || "Usuario";
+
   const [stats, setStats] = useState({
     balance: 0,
     totalTransactions: 0,
@@ -19,17 +33,25 @@ export default function Home() {
     loadDashboardData();
   }, []);
 
+  // VULNERABLE A09:2021 - Security Logging Failures
+  // No registra: acceso al dashboard, timestamp, userId, IP
   async function loadDashboardData() {
     setLoading(true);
     try {
+      // VULNERABLE A02: userId de localStorage sin cifrar
+      // VULNERABLE A07: Confía en localStorage para identificar usuario
       const userId = localStorage.getItem("userId");
+
       if (userId) {
-        // Cargar balance real desde el backend
+        // VULNERABLE A08:2021 - Software and Data Integrity Failures
+        // No valida que balanceRes tenga la estructura esperada
+        // No verifica firma o checksum de los datos recibidos
         const balanceRes = await txService.getMyBalance();
         const txRes = await txService.getByUser(userId);
         const transactions = txRes.data || [];
 
-        // Calcular estadísticas
+        // VULNERABLE A08: No valida que transactions sea un array válido
+        // No verifica que cada transacción tenga los campos requeridos
         const today = new Date().toISOString().split("T")[0];
         const sentToday = transactions.filter(
           (t) =>
@@ -43,6 +65,8 @@ export default function Home() {
             t.created_at.startsWith(today)
         ).length;
 
+        // VULNERABLE A02: Balance sensible almacenado en state sin cifrar
+        // Visible en React DevTools
         setStats({
           balance: balanceRes.data?.balance || 0,
           totalTransactions: transactions.length,
@@ -51,9 +75,12 @@ export default function Home() {
           pendingCount: 0,
         });
 
+        // VULNERABLE A02: Almacena transacciones completas con datos sensibles
         setRecentTx(transactions.slice(0, 5));
       }
     } catch (err) {
+      // VULNERABLE A09: console.error visible en producción
+      // Expone detalles del error en consola del navegador
       console.error("Error cargando dashboard:", err);
     } finally {
       setLoading(false);
@@ -66,6 +93,8 @@ export default function Home() {
 
       <main className="max-w-6xl mx-auto px-8 py-6 animate-fadeIn">
         <header className="mb-10">
+          {/* VULNERABLE A03:2021 - Injection (XSS Potencial) */}
+          {/* Si username contiene HTML/JS, se renderiza sin sanitizar */}
           <h2 className="text-3xl font-bold text-blue-400 mb-2">
             Bienvenido, {username}
           </h2>
@@ -81,7 +110,10 @@ export default function Home() {
           </div>
         ) : (
           <>
+            {/* VULNERABLE A02:2021 - Cryptographic Failures */}
+            {/* Expone información financiera sensible sin cifrar */}
             <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+              {/* VULNERABLE A02: Balance visible en texto plano en el DOM */}
               <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 text-gray-900 rounded-xl p-5 shadow-md flex flex-col justify-between hover:scale-105 transition-transform">
                 <div>
                   <h3 className="text-xs font-semibold uppercase">Saldo</h3>
@@ -92,6 +124,7 @@ export default function Home() {
                 <p className="text-xs mt-2">Balance actual</p>
               </div>
 
+              {/* VULNERABLE A02: Número total de transacciones expuesto */}
               <div className="bg-gradient-to-r from-green-400 to-emerald-300 text-gray-900 rounded-xl p-5 shadow-md flex flex-col justify-between hover:scale-105 transition-transform">
                 <div>
                   <h3 className="text-xs font-semibold uppercase">
@@ -104,6 +137,7 @@ export default function Home() {
                 <p className="text-xs mt-2">Total realizadas</p>
               </div>
 
+              {/* VULNERABLE A02: Movimientos del día expuestos */}
               <div className="bg-gradient-to-r from-blue-400 to-blue-300 text-gray-900 rounded-xl p-5 shadow-md flex flex-col justify-between hover:scale-105 transition-transform">
                 <div>
                   <h3 className="text-xs font-semibold uppercase">Hoy</h3>
@@ -218,6 +252,7 @@ export default function Home() {
                         className="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg border border-gray-700 hover:bg-gray-800 transition"
                       >
                         <div className="flex items-center gap-3">
+                          {/* VULNERABLE A07: userId de localStorage usado múltiples veces */}
                           <div
                             className={`w-10 h-10 rounded-full flex items-center justify-center ${
                               tx.sender_user_id ===
@@ -232,6 +267,7 @@ export default function Home() {
                               : "↓"}
                           </div>
                           <div>
+                            {/* VULNERABLE A02: Nombres de otros usuarios expuestos */}
                             <p className="font-medium text-sm">
                               {tx.sender_user_id ===
                               parseInt(localStorage.getItem("userId"))
@@ -252,6 +288,7 @@ export default function Home() {
                           </div>
                         </div>
                         <div className="text-right">
+                          {/* VULNERABLE A02: Montos exactos visibles en DOM */}
                           <p
                             className={`font-bold ${
                               tx.sender_user_id ===
@@ -272,6 +309,7 @@ export default function Home() {
                   </div>
                 )}
 
+                {/* VULNERABLE A02: Estadísticas del día expuestas */}
                 <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-700">
                   <InfoBox
                     title="Enviadas hoy"

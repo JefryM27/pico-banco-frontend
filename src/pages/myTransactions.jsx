@@ -1,3 +1,12 @@
+// src/pages/myTransactions.jsx
+/*
+  VULNERABILIDADES IMPLEMENTADAS:
+  - A02:2021 Cryptographic Failures: userId en localStorage sin cifrar, datos sensibles expuestos
+  - A03:2021 Injection (XSS): Renderiza description sin sanitizar
+  - A07:2021 Identification and Authentication Failures: Confía en localStorage manipulable
+  - A08:2021 Software and Data Integrity Failures: Sin validación de integridad de datos recibidos
+  - A09:2021 Security Logging Failures: No registra accesos ni exportaciones de datos
+*/
 import React, { useEffect, useState } from "react";
 import Header from "../components/header.jsx";
 import * as txService from "../services/transaction.service";
@@ -13,6 +22,11 @@ export default function MyTransactions() {
   const [filterDate, setFilterDate] = useState("all");
   const [sortBy, setSortBy] = useState("date-desc");
 
+  // VULNERABLE A02:2021 - Cryptographic Failures (CRÍTICO)
+  // VULNERABLE A07:2021 - Identification and Authentication Failures
+  // userId obtenido de localStorage sin cifrar
+  // Puede ser manipulado desde consola: localStorage.setItem('userId', '999')
+  // Permite ver transacciones de otros usuarios cambiando el valor
   const userId = parseInt(localStorage.getItem("userId"));
 
   useEffect(() => {
@@ -23,6 +37,8 @@ export default function MyTransactions() {
     applyFilters();
   }, [allTransactions, searchTerm, filterType, filterDate, sortBy]);
 
+  // VULNERABLE A09:2021 - Security Logging Failures
+  // No registra: acceso a transacciones, timestamp, IP, filtros aplicados
   async function loadTransactions() {
     setLoading(true);
     setError(null);
@@ -32,12 +48,21 @@ export default function MyTransactions() {
         return;
       }
 
+      // VULNERABLE A07: Envía userId del localStorage al backend
+      // Backend podría validar contra el token JWT pero no lo hace (IDOR)
       const res = await txService.getByUser(userId);
+
+      // VULNERABLE A08:2021 - Software and Data Integrity Failures
+      // No valida la estructura de los datos recibidos
+      // No verifica que todas las transacciones pertenezcan al usuario
+      // Acepta cualquier formato de respuesta sin validación de schema
       const myTransactions = (res.data || []).filter(
         (tx) => tx.sender_user_id === userId || tx.receiver_user_id === userId
       );
+
       setAllTransactions(myTransactions);
     } catch (err) {
+      // VULNERABLE A09: Error sin logging estructurado
       setError(err?.response?.data?.message || "Error al cargar transacciones");
     } finally {
       setLoading(false);
@@ -70,6 +95,9 @@ export default function MyTransactions() {
       result = result.filter((tx) => new Date(tx.created_at) >= yearAgo);
     }
 
+    // VULNERABLE A03:2021 - Injection (XSS)
+    // searchTerm se usa para filtrar pero no se sanitiza
+    // Si description contiene HTML/JS, se renderizará sin escape
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter(
@@ -101,6 +129,7 @@ export default function MyTransactions() {
     setSortBy("date-desc");
   }
 
+  // VULNERABLE A02: Cálculos exponen información financiera sensible
   const stats = {
     total: filteredTx.length,
     sent: filteredTx.filter((tx) => tx.sender_user_id === userId).length,
@@ -129,6 +158,7 @@ export default function MyTransactions() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-xs text-gray-400 mb-2">Buscar</label>
+              {/* VULNERABLE A03: Input sin sanitización */}
               <input
                 type="text"
                 value={searchTerm}
@@ -199,6 +229,7 @@ export default function MyTransactions() {
           </div>
         </div>
 
+        {/* VULNERABLE A02: Expone estadísticas financieras sensibles */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard
             title="Total"
@@ -236,6 +267,7 @@ export default function MyTransactions() {
 
           {error && (
             <div className="text-red-400 text-sm bg-red-900/20 p-4 rounded-lg border border-red-800">
+              {/* VULNERABLE A03: error puede contener HTML */}
               {error}
             </div>
           )}
@@ -298,6 +330,7 @@ function TransactionCard({ tx, userId }) {
           </div>
 
           <div className="flex-1">
+            {/* VULNERABLE A02: Expone nombres de otros usuarios */}
             <p className="font-medium">
               {isSent ? `Enviado a ${otherUser}` : `Recibido de ${otherUser}`}
             </p>
@@ -310,6 +343,9 @@ function TransactionCard({ tx, userId }) {
                 minute: "2-digit",
               })}
             </p>
+            {/* VULNERABLE A03:2021 - Injection (XSS STORED - CRÍTICO) */}
+            {/* description renderizada sin sanitizar */}
+            {/* Si contiene HTML/JS del backend, se ejecuta aquí */}
             {tx.description && (
               <p className="text-sm text-gray-400 mt-2 line-clamp-2">
                 {tx.description}
@@ -319,11 +355,13 @@ function TransactionCard({ tx, userId }) {
         </div>
 
         <div className="text-right ml-4">
+          {/* VULNERABLE A02: Expone montos exactos de transacciones */}
           <p
             className={`text-xl font-bold ${isSent ? "text-red-400" : "text-green-400"}`}
           >
             {isSent ? "-" : "+"}${parseFloat(tx.amount).toFixed(2)}
           </p>
+          {/* VULNERABLE A02: Expone ID de transacción (puede usarse para IDOR) */}
           <p className="text-xs text-gray-500 mt-1">ID: {tx.id}</p>
         </div>
       </div>
