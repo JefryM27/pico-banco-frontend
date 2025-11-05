@@ -1,3 +1,4 @@
+// src/components/header.jsx
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -54,6 +55,14 @@ export default function Header() {
               className="text-gray-300 hover:text-blue-400 text-sm transition no-underline"
             >
               Pagar Servicios
+            </Link>
+          </li>
+          <li>
+            <Link
+              to="/service-payments-history"
+              className="text-gray-300 hover:text-blue-400 text-sm transition no-underline"
+            >
+              Historial Servicios
             </Link>
           </li>
         </ul>

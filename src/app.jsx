@@ -11,6 +11,7 @@ import Profile from "./pages/profile.jsx";
 import Savings from "./pages/savings.jsx";
 import SavingsDetail from "./pages/savingsDetail.jsx";
 import NotFound from "./pages/notFount.jsx";
+import ServicePaymentsHistory from "./pages/servicePaymentsHistory.jsx";
 
 import { isAuthenticated } from "./services/auth.service.js";
 
@@ -90,7 +91,16 @@ export default function App() {
             )
           }
         />
-
+        <Route
+          path="/service-payments-history"
+          element={
+            isAuthenticated() ? (
+              <ServicePaymentsHistory />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </main>

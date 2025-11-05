@@ -1,6 +1,8 @@
+// src/pages/payServices.jsx
 import React, { useState } from "react";
 import Header from "../components/header.jsx";
-import * as txService from "../services/transaction.service";
+import * as servicePaymentService from "../services/servicePayment.service";
+import { Link } from "react-router-dom"; 
 
 const SERVICES = [
   {
@@ -9,7 +11,7 @@ const SERVICES = [
     icon: "⚡",
     color: "from-yellow-400 to-orange-400",
     provider: "CNE - Compañía Nacional de Electricidad",
-    accountExample: "12345678"
+    accountExample: "12345678",
   },
   {
     id: 2,
@@ -17,7 +19,7 @@ const SERVICES = [
     icon: "💧",
     color: "from-blue-400 to-cyan-400",
     provider: "ICAA - Instituto Costarricense de Acueductos",
-    accountExample: "87654321"
+    accountExample: "87654321",
   },
   {
     id: 3,
@@ -25,7 +27,7 @@ const SERVICES = [
     icon: "🌐",
     color: "from-purple-400 to-pink-400",
     provider: "Tigo - Servicios de Internet",
-    accountExample: "WEB-12345"
+    accountExample: "WEB-12345",
   },
   {
     id: 4,
@@ -33,7 +35,7 @@ const SERVICES = [
     icon: "📱",
     color: "from-green-400 to-emerald-400",
     provider: "ICE - Telefonía Móvil",
-    accountExample: "8888-8888"
+    accountExample: "8888-8888",
   },
   {
     id: 5,
@@ -41,7 +43,7 @@ const SERVICES = [
     icon: "🔥",
     color: "from-red-400 to-orange-400",
     provider: "Zeta Gas - Distribuidora",
-    accountExample: "GAS-99999"
+    accountExample: "GAS-99999",
   },
   {
     id: 6,
@@ -49,8 +51,8 @@ const SERVICES = [
     icon: "📺",
     color: "from-indigo-400 to-blue-400",
     provider: "Cabletica - Televisión por Cable",
-    accountExample: "TV-55555"
-  }
+    accountExample: "TV-55555",
+  },
 ];
 
 export default function PayServices() {
@@ -72,7 +74,8 @@ export default function PayServices() {
   function validate() {
     const errors = {};
     if (!selectedService) errors.service = "Selecciona un servicio";
-    if (!accountNumber.trim()) errors.accountNumber = "Número de cuenta requerido";
+    if (!accountNumber.trim())
+      errors.accountNumber = "Número de cuenta requerido";
     if (!amount || parseFloat(amount) <= 0) errors.amount = "Monto inválido";
     return errors;
   }
@@ -81,7 +84,7 @@ export default function PayServices() {
     e.preventDefault();
     const errors = validate();
     setErrorFields(errors);
-    
+
     if (Object.keys(errors).length === 0) {
       setShowConfirm(true);
     }
@@ -92,18 +95,22 @@ export default function PayServices() {
     setMsg(null);
 
     try {
-      const userId = localStorage.getItem("userId");
-      const description = `Pago de ${selectedService.name} - ${selectedService.provider} - Cuenta: ${accountNumber}${reference ? ` - Ref: ${reference}` : ""}`;
+      const description = `Pago de ${selectedService.name} - Cuenta: ${accountNumber}${reference ? ` - Ref: ${reference}` : ""}`;
 
-      await txService.create({
-        senderId: userId,
-        receiverId: selectedService.id, // ID del proveedor (simulado)
+      await servicePaymentService.createPayment({
+        serviceName: selectedService.name,
+        serviceProvider: selectedService.provider,
+        accountNumber: accountNumber,
         amount: parseFloat(amount),
+        reference: reference || null,
         description: description,
       });
 
-      setMsg({ type: "success", text: `Pago de ${selectedService.name} realizado exitosamente` });
-      
+      setMsg({
+        type: "success",
+        text: `Pago de ${selectedService.name} realizado exitosamente`,
+      });
+
       // Limpiar formulario
       setAccountNumber("");
       setAmount("");
@@ -111,9 +118,11 @@ export default function PayServices() {
       setSelectedService(null);
       setErrorFields({});
       setShowConfirm(false);
-
     } catch (err) {
-      const detail = err?.response?.data?.message || err?.message || "Error procesando el pago";
+      const detail =
+        err?.response?.data?.error ||
+        err?.message ||
+        "Error procesando el pago";
       setMsg({ type: "error", text: detail });
       setShowConfirm(false);
     } finally {
@@ -126,13 +135,21 @@ export default function PayServices() {
       <Header />
 
       <main className="max-w-6xl mx-auto px-8 py-6">
-        <header className="mb-8">
-          <h2 className="text-3xl font-bold text-blue-400 mb-2">
-            Pago de Servicios
-          </h2>
-          <p className="text-gray-400 text-sm">
-            Paga tus servicios de luz, agua, internet y más de forma rápida.
-          </p>
+        <header className="mb-8 flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-bold text-blue-400 mb-2">
+              Pago de Servicios
+            </h2>
+            <p className="text-gray-400 text-sm">
+              Paga tus servicios de luz, agua, internet y más de forma rápida.
+            </p>
+          </div>
+          <Link
+            to="/service-payments-history"
+            className="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded-lg font-semibold transition no-underline flex items-center gap-2"
+          >
+            📋 Ver Historial
+          </Link>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -153,12 +170,16 @@ export default function PayServices() {
                         : "bg-gray-800/50 border-gray-700 hover:bg-gray-800"
                     }`}
                   >
-                    <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${service.color} flex items-center justify-center text-2xl`}>
+                    <div
+                      className={`w-12 h-12 rounded-full bg-gradient-to-r ${service.color} flex items-center justify-center text-2xl`}
+                    >
                       {service.icon}
                     </div>
                     <div className="text-left flex-1">
                       <p className="font-medium text-sm">{service.name}</p>
-                      <p className="text-xs text-gray-400 truncate">{service.provider}</p>
+                      <p className="text-xs text-gray-400 truncate">
+                        {service.provider}
+                      </p>
                     </div>
                     {selectedService?.id === service.id && (
                       <span className="text-blue-400">✓</span>
@@ -175,22 +196,28 @@ export default function PayServices() {
               {!selectedService ? (
                 <div className="text-center py-20">
                   <p className="text-5xl mb-4">💳</p>
-                  <p className="text-gray-400">Selecciona un servicio para comenzar</p>
+                  <p className="text-gray-400">
+                    Selecciona un servicio para comenzar
+                  </p>
                 </div>
               ) : (
                 <>
-                  {/* Header del servicio seleccionado */}
-                  <div className={`bg-gradient-to-r ${selectedService.color} rounded-lg p-4 mb-6 text-gray-900`}>
+                  <div
+                    className={`bg-gradient-to-r ${selectedService.color} rounded-lg p-4 mb-6 text-gray-900`}
+                  >
                     <div className="flex items-center gap-3">
                       <span className="text-4xl">{selectedService.icon}</span>
                       <div>
-                        <h3 className="font-bold text-lg">{selectedService.name}</h3>
-                        <p className="text-sm opacity-90">{selectedService.provider}</p>
+                        <h3 className="font-bold text-lg">
+                          {selectedService.name}
+                        </h3>
+                        <p className="text-sm opacity-90">
+                          {selectedService.provider}
+                        </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Formulario */}
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -202,11 +229,15 @@ export default function PayServices() {
                         onChange={(e) => setAccountNumber(e.target.value)}
                         placeholder={`Ej: ${selectedService.accountExample}`}
                         className={`w-full px-4 py-2 bg-gray-900 border ${
-                          errorFields.accountNumber ? "border-red-500" : "border-gray-700"
+                          errorFields.accountNumber
+                            ? "border-red-500"
+                            : "border-gray-700"
                         } rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none`}
                       />
                       {errorFields.accountNumber && (
-                        <p className="text-red-400 text-xs mt-1">{errorFields.accountNumber}</p>
+                        <p className="text-red-400 text-xs mt-1">
+                          {errorFields.accountNumber}
+                        </p>
                       )}
                     </div>
 
@@ -215,7 +246,9 @@ export default function PayServices() {
                         Monto a pagar <span className="text-red-400">*</span>
                       </label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                          $
+                        </span>
                         <input
                           type="number"
                           step="0.01"
@@ -223,12 +256,16 @@ export default function PayServices() {
                           onChange={(e) => setAmount(e.target.value)}
                           placeholder="0.00"
                           className={`w-full pl-8 pr-4 py-2 bg-gray-900 border ${
-                            errorFields.amount ? "border-red-500" : "border-gray-700"
+                            errorFields.amount
+                              ? "border-red-500"
+                              : "border-gray-700"
                           } rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none`}
                         />
                       </div>
                       {errorFields.amount && (
-                        <p className="text-red-400 text-xs mt-1">{errorFields.amount}</p>
+                        <p className="text-red-400 text-xs mt-1">
+                          {errorFields.amount}
+                        </p>
                       )}
                     </div>
 
@@ -245,17 +282,22 @@ export default function PayServices() {
                       />
                     </div>
 
-                    {/* Resumen */}
                     <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-                      <p className="text-xs text-gray-400 mb-2">Resumen del pago</p>
+                      <p className="text-xs text-gray-400 mb-2">
+                        Resumen del pago
+                      </p>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-400">Servicio:</span>
-                          <span className="font-medium">{selectedService.name}</span>
+                          <span className="font-medium">
+                            {selectedService.name}
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-400">Cuenta:</span>
-                          <span className="font-medium">{accountNumber || "---"}</span>
+                          <span className="font-medium">
+                            {accountNumber || "---"}
+                          </span>
                         </div>
                         <div className="flex justify-between pt-2 border-t border-gray-700">
                           <span className="text-gray-400">Total:</span>
@@ -308,7 +350,9 @@ export default function PayServices() {
             </div>
 
             <div className="p-6 space-y-4">
-              <div className={`bg-gradient-to-r ${selectedService.color} rounded-lg p-3 text-gray-900 text-center`}>
+              <div
+                className={`bg-gradient-to-r ${selectedService.color} rounded-lg p-3 text-gray-900 text-center`}
+              >
                 <span className="text-3xl">{selectedService.icon}</span>
                 <p className="font-bold mt-1">{selectedService.name}</p>
               </div>
@@ -316,7 +360,9 @@ export default function PayServices() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between p-2 bg-gray-800/50 rounded">
                   <span className="text-gray-400">Proveedor:</span>
-                  <span className="font-medium">{selectedService.provider}</span>
+                  <span className="font-medium">
+                    {selectedService.provider}
+                  </span>
                 </div>
                 <div className="flex justify-between p-2 bg-gray-800/50 rounded">
                   <span className="text-gray-400">Cuenta:</span>
@@ -330,7 +376,9 @@ export default function PayServices() {
                 )}
                 <div className="flex justify-between p-3 bg-blue-600/20 border border-blue-500 rounded">
                   <span className="text-gray-300">Total a pagar:</span>
-                  <span className="text-2xl font-bold text-blue-400">${parseFloat(amount).toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-blue-400">
+                    ${parseFloat(amount).toFixed(2)}
+                  </span>
                 </div>
               </div>
 

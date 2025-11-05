@@ -147,6 +147,32 @@ export default function Home() {
                   </li>
                   <li>
                     <Link
+                      to="/savings"
+                      className="flex items-center gap-3 bg-gray-800/50 hover:bg-gray-700 p-3 rounded-md transition border border-gray-700"
+                    >
+                      <span className="text-2xl">💰</span>
+                      <div>
+                        <p className="font-medium">Ahorros</p>
+                        <p className="text-xs text-gray-400">Mis sobres</p>
+                      </div>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/pay-services"
+                      className="flex items-center gap-3 bg-gray-800/50 hover:bg-gray-700 p-3 rounded-md transition border border-gray-700"
+                    >
+                      <span className="text-2xl">💳</span>
+                      <div>
+                        <p className="font-medium">Pagar servicios</p>
+                        <p className="text-xs text-gray-400">
+                          Luz, agua, internet
+                        </p>
+                      </div>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
                       to="/profile"
                       className="flex items-center gap-3 bg-gray-800/50 hover:bg-gray-700 p-3 rounded-md transition border border-gray-700"
                     >
