@@ -8,6 +8,8 @@ import CreateTransaction from "./pages/createTransaction.jsx";
 import MyTransactions from "./pages/myTransactions.jsx";
 import PayServices from "./pages/payServices.jsx";
 import Profile from "./pages/profile.jsx";
+import Savings from "./pages/savings.jsx";
+import SavingsDetail from "./pages/savingsDetail.jsx";
 import NotFound from "./pages/notFount.jsx";
 
 import { isAuthenticated } from "./services/auth.service.js";
@@ -39,25 +41,53 @@ export default function App() {
         <Route
           path="/transactions"
           element={
-            isAuthenticated() ? <MyTransactions /> : <Navigate to="/login" replace />
+            isAuthenticated() ? (
+              <MyTransactions />
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         />
         <Route
           path="/create"
           element={
-            isAuthenticated() ? <CreateTransaction /> : <Navigate to="/login" replace />
+            isAuthenticated() ? (
+              <CreateTransaction />
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         />
         <Route
           path="/pay-services"
           element={
-            isAuthenticated() ? <PayServices /> : <Navigate to="/login" replace />
+            isAuthenticated() ? (
+              <PayServices />
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         />
         <Route
           path="/profile"
           element={
             isAuthenticated() ? <Profile /> : <Navigate to="/login" replace />
+          }
+        />
+        <Route
+          path="/savings"
+          element={
+            isAuthenticated() ? <Savings /> : <Navigate to="/login" replace />
+          }
+        />
+        <Route
+          path="/savings/:id"
+          element={
+            isAuthenticated() ? (
+              <SavingsDetail />
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         />
 
