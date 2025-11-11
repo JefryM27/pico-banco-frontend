@@ -1,6 +1,7 @@
 // src/pages/createTransaction.jsx
 /*
   VULNERABILIDADES IMPLEMENTADAS:
+  - A01:2021 Broken Access Control (IDOR): Permite hacer transferencias desde cuenta ajena
   - A02:2021 Cryptographic Failures: accountNumber en localStorage sin cifrar
   - A03:2021 Injection (XSS): dangerouslySetInnerHTML con sanitización débil (solo quita <script>)
   - A04:2021 Insecure Design: Sin rate limiting, permite transferencias rápidas múltiples
@@ -8,10 +9,11 @@
   - A07:2021 Authentication Failures: Confía en localStorage para datos críticos
   - A09:2021 Security Logging Failures: No registra transacciones creadas
 */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "../components/header.jsx";
 import * as txService from "../services/transaction.service";
 import axios from "axios";
+import { detectXSS, showXSSFlag } from "../utils/flagDetector.js";
 
 // VULNERABLE A03:2021 - Injection (XSS - CRÍTICO)
 // stripScriptTags es INSUFICIENTE para prevenir XSS
@@ -27,11 +29,13 @@ function stripScriptTags(html = "") {
 }
 
 export default function CreateTransaction() {
+  // VULNERABLE A01:2021 - Broken Access Control (IDOR - CRÍTICO)
   // VULNERABLE A02:2021 - Cryptographic Failures (CRÍTICO)
   // VULNERABLE A07:2021 - Identification and Authentication Failures
   // accountNumber obtenido de localStorage sin cifrar
   // localStorage es accesible por cualquier script en el dominio (XSS)
   // No hay validación de que accountNumber sea válido o del usuario actual
+  // Si manipulas userId en localStorage, puedes hacer transferencias desde otras cuentas
   const myAccountNumber = localStorage.getItem("accountNumber") || "";
 
   const [receiverAccount, setReceiverAccount] = useState("");
@@ -40,10 +44,21 @@ export default function CreateTransaction() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [msg, setMsg] = useState(null);
+  const [flag, setFlag] = useState(null);
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [errorFields, setErrorFields] = useState({});
+  const [xssExecuted, setXssExecuted] = useState(false);
+
+  // 🚩 DETECTAR XSS EN TIEMPO REAL
+  useEffect(() => {
+    if (description && detectXSS(description)) {
+      setFlag(showXSSFlag());
+    } else if (flag?.vulnerability?.includes("XSS")) {
+      setFlag(null);
+    }
+  }, [description]);
 
   // VULNERABLE A05:2021 - Security Misconfiguration
   // URL del backend hardcoded en código fuente
@@ -115,11 +130,30 @@ export default function CreateTransaction() {
     // Permite transferencias de cantidades absurdas (ej: $999999999)
     // Sin validación de límite diario de transferencias
 
+    // VULNERABLE A01: No valida que myAccountNumber pertenezca al usuario autenticado
+    // Permite transferir desde cuentas ajenas si se manipula localStorage
     if (receiverAccount === myAccountNumber)
       errors.receiverAccount = "No puedes transferir a tu propia cuenta";
     return errors;
   }
 
+  // 🚩 EJECUTAR XSS DESPUÉS DE CREAR TRANSACCIÓN
+  function executeXSS(descriptionHTML) {
+    // Crear contenedor temporal para ejecutar el XSS
+    const tempDiv = document.createElement("div");
+    tempDiv.style.display = "none";
+    tempDiv.innerHTML = descriptionHTML;
+    document.body.appendChild(tempDiv);
+
+    // Remover después de 100ms
+    setTimeout(() => {
+      document.body.removeChild(tempDiv);
+    }, 100);
+
+    setXssExecuted(true);
+  }
+
+  // VULNERABLE A01:2021 - Broken Access Control (IDOR - CRÍTICO)
   // VULNERABLE A04:2021 - Insecure Design (CRÍTICO)
   // Sin rate limiting: permite múltiples transferencias rápidas
   // Sin confirmación adicional para montos grandes
@@ -127,20 +161,35 @@ export default function CreateTransaction() {
   async function onSubmit(e) {
     e.preventDefault();
     setMsg(null);
+    setXssExecuted(false);
     const errors = validate();
     setErrorFields(errors);
     if (Object.keys(errors).length) return;
 
     setLoading(true);
     try {
+      // VULNERABLE A01: myAccountNumber viene de localStorage manipulable
+      // VULNERABLE A07: Confía en localStorage para identificar la cuenta origen
+      // Si cambias accountNumber en localStorage, puedes hacer transferencias desde otras cuentas
       // VULNERABLE A03: description enviado sin sanitizar al backend
       // Permite SQL injection si el backend concatena (ver transaction.model.js)
       const res = await txService.create({
-        senderAccount: myAccountNumber, // VULNERABLE A07: De localStorage
+        senderAccount: myAccountNumber, // VULNERABLE A01 + A07: De localStorage manipulable
         receiverAccount: receiverAccount.trim(),
         amount: Number(amount),
         description: description, // VULNERABLE A03: Sin sanitizar
       });
+
+      // 🚩 DETECTAR FLAG EN RESPUESTA (SQL Injection)
+      if (res.data?.flag && res.data.flag.vulnerability?.includes("SQL")) {
+        setFlag(res.data.flag);
+      }
+
+      // 🚩 EJECUTAR XSS SI FUE DETECTADO
+      if (detectXSS(description)) {
+        const sanitized = stripScriptTags(description);
+        executeXSS(sanitized);
+      }
 
       // VULNERABLE A09: Transacción exitosa sin logging
       // No registra: timestamp, monto, cuenta destino, IP
@@ -156,6 +205,11 @@ export default function CreateTransaction() {
       setAccountHolder("");
       setErrorFields({});
     } catch (err) {
+      // 🚩 DETECTAR FLAG EN ERROR (SQL Injection)
+      if (err?.response?.data?.flag) {
+        setFlag(err.response.data.flag);
+      }
+
       // VULNERABLE A05: Expone error completo del backend
       const detail = err?.response?.data?.error || err?.message || String(err);
       setMsg({ type: "error", text: detail });
@@ -182,19 +236,92 @@ export default function CreateTransaction() {
         </header>
 
         <div className="bg-white/5 border border-white/10 rounded-xl p-6 shadow-md">
+          {/* 🚩 MOSTRAR FLAG SI EXISTE */}
+          {flag && (
+            <div
+              style={{
+                background: flag.vulnerability?.includes("XSS")
+                  ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
+                  : "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)",
+                border: flag.vulnerability?.includes("XSS")
+                  ? "2px solid #fcd34d"
+                  : "2px solid #fca5a5",
+                borderRadius: "12px",
+                padding: "16px",
+                marginBottom: "20px",
+                boxShadow: flag.vulnerability?.includes("XSS")
+                  ? "0 4px 20px rgba(245, 158, 11, 0.3)"
+                  : "0 4px 20px rgba(220, 38, 38, 0.3)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  marginBottom: "8px",
+                }}
+              >
+                <span style={{ fontSize: "32px" }}>🚩</span>
+                <h3
+                  style={{
+                    margin: 0,
+                    color: "#fff",
+                    fontSize: "18px",
+                    fontWeight: "700",
+                  }}
+                >
+                  {flag.message}
+                </h3>
+              </div>
+              <div
+                style={{
+                  color: flag.vulnerability?.includes("XSS")
+                    ? "#fef3c7"
+                    : "#fecaca",
+                  fontSize: "14px",
+                  marginLeft: "44px",
+                }}
+              >
+                <p style={{ margin: "4px 0" }}>
+                  <strong>Vulnerabilidad:</strong> {flag.vulnerability}
+                </p>
+                <p style={{ margin: "4px 0" }}>
+                  <strong>Descripción:</strong> {flag.description}
+                </p>
+                <p style={{ margin: "4px 0" }}>
+                  <strong>Severidad:</strong> {flag.severity}
+                </p>
+                {xssExecuted && flag.vulnerability?.includes("XSS") && (
+                  <p
+                    style={{
+                      margin: "8px 0 0 0",
+                      color: "#fef3c7",
+                      fontWeight: "600",
+                    }}
+                  >
+                    ✅ El payload XSS se ejecutó al crear la transacción
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           <form onSubmit={onSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Cuenta Origen
               </label>
-              {/* VULNERABLE A02: Muestra accountNumber sin cifrar */}
+              {/* VULNERABLE A01 + A02: Muestra accountNumber de localStorage (puede ser de otra cuenta) */}
               <input
                 type="text"
                 value={myAccountNumber}
                 disabled
                 className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-400 cursor-not-allowed"
               />
-              <p className="text-xs text-gray-500 mt-1">Tu cuenta</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Cuenta desde la que se realizará la transferencia
+              </p>
             </div>
 
             <div>

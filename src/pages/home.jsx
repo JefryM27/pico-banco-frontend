@@ -1,6 +1,7 @@
 // src/pages/home.jsx
 /*
   VULNERABILIDADES IMPLEMENTADAS:
+  - A01:2021 Broken Access Control (IDOR): Permite acceso a cuentas ajenas manipulando localStorage
   - A02:2021 Cryptographic Failures: username y userId en localStorage sin cifrar
   - A07:2021 Identification and Authentication Failures: Confía en datos de localStorage manipulables
   - A08:2021 Software and Data Integrity Failures: Sin validación de datos del backend
@@ -10,6 +11,11 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/header.jsx";
 import * as txService from "../services/transaction.service";
+import {
+  getUserIdFromToken,
+  detectIDOR,
+  showIDORFlag,
+} from "../utils/flagDetector.js";
 
 export default function Home() {
   // VULNERABLE A02:2021 - Cryptographic Failures
@@ -18,6 +24,8 @@ export default function Home() {
   // Puede ser manipulado desde consola del navegador
   // localStorage.setItem('username', '<script>alert("XSS")</script>')
   const username = localStorage.getItem("username") || "Usuario";
+  const localUserId = localStorage.getItem("userId");
+  const token = localStorage.getItem("token");
 
   const [stats, setStats] = useState({
     balance: 0,
@@ -28,6 +36,17 @@ export default function Home() {
   });
   const [recentTx, setRecentTx] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [idorFlag, setIdorFlag] = useState(null); // 🚩 NUEVO
+
+  // 🚩 DETECTAR IDOR AL CARGAR
+  useEffect(() => {
+    const realUserId = getUserIdFromToken(token);
+    if (detectIDOR(realUserId, localUserId)) {
+      setIdorFlag(showIDORFlag(realUserId, localUserId, username));
+    } else {
+      setIdorFlag(null);
+    }
+  }, [token, localUserId, username]);
 
   useEffect(() => {
     loadDashboardData();
@@ -102,6 +121,98 @@ export default function Home() {
             Gestiona tus transacciones desde tu panel personal.
           </p>
         </header>
+
+        {/* 🚩 MOSTRAR FLAG IDOR SI EXISTE */}
+        {idorFlag && (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)",
+              border: "2px solid #fca5a5",
+              borderRadius: "12px",
+              padding: "20px",
+              marginBottom: "30px",
+              boxShadow: "0 8px 30px rgba(220, 38, 38, 0.4)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "12px",
+              }}
+            >
+              <span style={{ fontSize: "36px" }}>🚩</span>
+              <h3
+                style={{
+                  margin: 0,
+                  color: "#fff",
+                  fontSize: "20px",
+                  fontWeight: "700",
+                }}
+              >
+                {idorFlag.message}
+              </h3>
+            </div>
+            <div
+              style={{
+                color: "#fecaca",
+                fontSize: "14px",
+                marginLeft: "48px",
+              }}
+            >
+              <p style={{ margin: "6px 0" }}>
+                <strong>Vulnerabilidad:</strong> {idorFlag.vulnerability}
+              </p>
+              <p style={{ margin: "6px 0" }}>
+                <strong>Descripción:</strong> {idorFlag.description}
+              </p>
+              <p style={{ margin: "6px 0" }}>
+                <strong>Severidad:</strong> {idorFlag.severity}
+              </p>
+              <div
+                style={{
+                  background: "rgba(0,0,0,0.3)",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  marginTop: "12px",
+                  fontFamily: "monospace",
+                  fontSize: "13px",
+                }}
+              >
+                <p style={{ margin: "4px 0" }}>
+                  <strong>🔓 Tu User ID real:</strong>{" "}
+                  {idorFlag.details.realUserId}
+                </p>
+                <p style={{ margin: "4px 0" }}>
+                  <strong>🎭 User ID suplantado:</strong>{" "}
+                  {idorFlag.details.spoofedUserId}
+                </p>
+                <p style={{ margin: "4px 0" }}>
+                  <strong>👤 Usuario víctima:</strong>{" "}
+                  {idorFlag.details.username}
+                </p>
+                <p style={{ margin: "8px 0 0 0", color: "#fef3c7" }}>
+                  <strong>⚠️ Impacto:</strong> {idorFlag.details.impact}
+                </p>
+              </div>
+              <p
+                style={{
+                  margin: "12px 0 0 0",
+                  fontSize: "13px",
+                  color: "#fef3c7",
+                  background: "rgba(254, 243, 199, 0.1)",
+                  padding: "8px",
+                  borderRadius: "6px",
+                }}
+              >
+                💡 <strong>Cómo se explotó:</strong> Se manipuló
+                localStorage.setItem('userId', '{idorFlag.details.spoofedUserId}
+                ') para acceder a esta cuenta sin autorización
+              </p>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center py-20">

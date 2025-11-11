@@ -12,7 +12,8 @@ import Savings from "./pages/savings.jsx";
 import SavingsDetail from "./pages/savingsDetail.jsx";
 import NotFound from "./pages/notFount.jsx";
 import ServicePaymentsHistory from "./pages/servicePaymentsHistory.jsx";
-
+import UsersList from "./pages/userList.jsx";
+import UserDetail from "./pages/userDetail.jsx";
 import { isAuthenticated } from "./services/auth.service.js";
 
 export default function App() {
@@ -27,6 +28,13 @@ export default function App() {
             ) : (
               <Navigate to="/login" replace />
             )
+          }
+        />
+
+        <Route
+          path="/users"
+          element={
+            isAuthenticated() ? <UsersList /> : <Navigate to="/login" replace />
           }
         />
 
@@ -96,6 +104,16 @@ export default function App() {
           element={
             isAuthenticated() ? (
               <ServicePaymentsHistory />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/users/:id"
+          element={
+            isAuthenticated() ? (
+              <UserDetail />
             ) : (
               <Navigate to="/login" replace />
             )
