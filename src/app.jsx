@@ -15,6 +15,7 @@ import ServicePaymentsHistory from "./pages/servicePaymentsHistory.jsx";
 import UsersList from "./pages/userList.jsx";
 import UserDetail from "./pages/userDetail.jsx";
 import { isAuthenticated } from "./services/auth.service.js";
+import UserEdit from "./pages/userEdit.jsx";
 
 export default function App() {
   return (
@@ -117,6 +118,12 @@ export default function App() {
             ) : (
               <Navigate to="/login" replace />
             )
+          }
+        />
+        <Route
+          path="/users/:id/edit"
+          element={
+            isAuthenticated() ? <UserEdit /> : <Navigate to="/login" replace />
           }
         />
         <Route path="*" element={<NotFound />} />
